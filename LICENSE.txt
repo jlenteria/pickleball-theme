@@ -1,0 +1,9 @@
+# No License Chosen
+
+This software does not currently have a license.
+
+By default, all rights are reserved. This means:
+- You may view the code.
+- You may not use, modify, or distribute this software for any purpose without explicit written permission from the copyright holder.
+
+The license for this software is still under consideration and will be added in the future. Until then, please contact [YOUR CONTACT INFORMATION] for any inquiries about usage or licensing.

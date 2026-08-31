@@ -1,0 +1,519 @@
+package portal
+
+import (
+	"fmt"
+	"strconv"
+
+	sdkapi "sdk/api"
+	sdkutils "github.com/flarewifi/sdk-utils/v2"
+
+	"com.flarego.pickleball-theme/app/settings"
+)
+
+type PortalIndexData struct {
+	Navs             []sdkapi.PortalNavItem
+	DeviceMac        string
+	DeviceIP         string
+	IsSessionRunning bool
+	IsOnline         bool
+	Session          sdkapi.SessionData
+	Summary          sdkapi.SessionSummary
+	Client           sdkapi.IClientDevice
+	BrandName        string
+	ThemeTagLine     string
+	LogoURL          string
+	BannerURL        string
+	CourtRates       []settings.CourtRate
+	BookingURL       string
+	Tutorials        []settings.Tutorial
+	Game             settings.GameSettings
+}
+
+templ PortalIndexPage(api sdkapi.IPluginApi, data PortalIndexData) {
+	<div id="home" class="pickleball-card">
+		<div class="pickleball-brand">
+			<span class="pickleball-brand-badge">
+				<img src={ data.LogoURL } alt={ data.BrandName } class="pickleball-brand-logo"/>
+			</span>
+			<h1 class="pickleball-brand-name">{ data.BrandName }</h1>
+			<p class="pickleball-brand-tagline">{ data.ThemeTagLine }</p>
+			<div class="pickleball-banner"><img src={ data.BannerURL } alt={ api.Translate("label", "Venue banner") }/></div>
+		</div>
+		<!-- Device Info -->
+		if data.DeviceMac != "" || data.DeviceIP != "" {
+			<div class="device-info">
+				if data.DeviceMac != "" {
+					<span>{ api.Translate("label", "MAC") }: <strong>{ data.DeviceMac }</strong></span>
+				}
+				if data.DeviceMac != "" && data.DeviceIP != "" {
+					<span class="info-sep">&mdash;</span>
+				}
+				if data.DeviceIP != "" {
+					<span>{ api.Translate("label", "IP") }: <strong>{ data.DeviceIP }</strong></span>
+				}
+			</div>
+		}
+		<!-- Session Summary -->
+		<div
+			class="session-slot"
+			hx-get={ api.Http().Helpers().UrlForRoute("portal-theme:pickleball-theme:session-info") }
+			hx-trigger={ fmt.Sprintf("sse:%s, sse:%s, sse:%s",
+				sdkapi.PortalEventSessionConnected, sdkapi.PortalEventSessionDisconnected, sdkapi.PortalEventSessionActivated) }
+			hx-swap="innerHTML"
+		>
+			@SessionInfo(api, data.Client, data.Session, data.Summary, data.IsSessionRunning)
+		</div>
+		<!-- Action buttons -->
+		<div class="d-grid gap-2 action-buttons" role="navigation" aria-label={ api.Translate("label", "Portal actions") }>
+			for _, nav := range data.Navs {
+				if isInsertCoinBtn(nav) {
+					<a
+						href={ templ.SafeURL(nav.RouteUrl) }
+						class="btn btn-primary portal-action-btn"
+						role="button"
+						aria-label={ nav.Label }
+						{ templ.Attributes(navAttrsNoClass(nav))... }
+					>
+						if nav.Icon != "" {
+							<span class="btn-icon" aria-hidden="true">
+								@templ.Raw(nav.Icon)
+							</span>
+						}
+						<span>{ nav.Label }</span>
+					</a>
+				}
+			}
+			for _, nav := range data.Navs {
+				if !isInsertCoinBtn(nav) {
+					<a
+						href={ templ.SafeURL(nav.RouteUrl) }
+						class="btn btn-outline-primary portal-action-btn"
+						role="button"
+						aria-label={ nav.Label }
+						{ templ.Attributes(navAttrsNoClass(nav))... }
+					>
+						if nav.Icon != "" {
+							<span class="btn-icon" aria-hidden="true">
+								@templ.Raw(nav.Icon)
+							</span>
+						}
+						<span>{ nav.Label }</span>
+					</a>
+				}
+			}
+			<a
+				href={ templ.SafeURL(api.Http().Helpers().UrlForRoute("portal-theme:pickleball-theme:court-rates")) }
+				class="btn btn-outline-primary portal-action-btn"
+			>
+				<span class="btn-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></span>
+				{ api.Translate("label", "Court Info & Booking") }
+			</a>
+		</div>
+		<!-- Enter voucher code -->
+		<form
+			class="voucher-form"
+			method="POST"
+			action={ templ.SafeURL(api.Http().Helpers().UrlForRoute("portal-theme:pickleball-theme:voucher")) }
+			aria-label={ api.Translate("label", "Redeem voucher code") }
+		>
+			<label class="voucher-label" for="voucher-code">{ api.Translate("label", "Enter Voucher Code") }</label>
+			<div class="voucher-input-group">
+				<input
+					id="voucher-code"
+					name="voucher_code"
+					type="text"
+					class="form-control voucher-input"
+					placeholder={ api.Translate("label", "e.g. ABCD-1234") }
+					autocomplete="off"
+					autocapitalize="characters"
+					aria-describedby="voucher-hint"
+					pattern="[A-Za-z0-9-]+"
+					required
+				/>
+				<button type="submit" class="btn btn-primary voucher-apply" aria-label={ api.Translate("label", "Apply voucher code") }>
+					{ api.Translate("label", "Apply") }
+				</button>
+			</div>
+			<span id="voucher-hint" class="visually-hidden">{ api.Translate("label", "Enter your voucher code using letters, numbers, and dashes") }</span>
+		</form>
+		<!-- Internet Status -->
+		<div
+			class="internet-status"
+			hx-get={ api.Http().Helpers().UrlForRoute("portal-theme:pickleball-theme:internet-status") }
+			hx-trigger={ fmt.Sprintf("sse:%s, sse:%s",
+				sdkapi.EventInternetUp, sdkapi.EventInternetDown) }
+			hx-swap="innerHTML"
+		>
+			@InternetStatus(api, data.IsOnline)
+		</div>
+	</div>
+}
+
+templ TutorialsModal(api sdkapi.IPluginApi, tutorials []settings.Tutorial) {
+	<div class="modal fade court-rates-modal" id="tutorials-modal" tabindex="-1" aria-labelledby="tutorials-modal-title" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="modal-title h5" id="tutorials-modal-title">{ api.Translate("label", "How to Play") }</h2>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ api.Translate("label", "Close") }></button>
+				</div>
+				<div class="modal-body">
+					<p class="text-body-secondary small">{ api.Translate("label", "Learn more about pickleball") }</p>
+					<div class="court-rates-list">
+						for i, tutorial := range tutorials {
+							<button type="button" class="court-rate-row text-start w-100" data-bs-toggle="modal" data-bs-target={ "#tutorial-player-" + strconv.Itoa(i) }>
+								<strong>{ tutorial.Title }</strong><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+							</button>
+						}
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" data-bs-dismiss="modal">{ api.Translate("label", "Close") }</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ TutorialPlayerModal(api sdkapi.IPluginApi, index int, tutorial settings.Tutorial) {
+	<div class="modal fade court-rates-modal" id={ "tutorial-player-" + strconv.Itoa(index) } tabindex="-1" aria-labelledby={ "tutorial-player-title-" + strconv.Itoa(index) } aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="modal-title h5" id={ "tutorial-player-title-" + strconv.Itoa(index) }>{ tutorial.Title }</h2>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ api.Translate("label", "Close") }></button>
+				</div>
+				<div class="modal-body">
+					if isDirectVideoURL(tutorial.URL) {
+						<video class="w-100 rounded-3" controls preload="metadata" src={ templ.SafeURL(tutorial.URL) }>
+							{ api.Translate("label", "Your browser does not support video playback.") }
+						</video>
+					} else {
+						<div class="ratio ratio-16x9">
+							<iframe src={ templ.SafeURL(embedTutorialURL(tutorial.URL)) } title={ tutorial.Title } allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ CourtRatesModal(api sdkapi.IPluginApi, rates []settings.CourtRate) {
+	<div class="modal fade court-rates-modal" id="court-rates-modal" tabindex="-1" aria-labelledby="court-rates-modal-title" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="modal-title h5" id="court-rates-modal-title">{ api.Translate("label", "Court Rates") }</h2>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ api.Translate("label", "Close") }></button>
+				</div>
+				<div class="modal-body">
+					<p class="text-body-secondary small">{ api.Translate("label", "Choose a pickleball session") }</p>
+					<div class="court-rates-list">
+						for _, rate := range rates {
+							<div class="court-rate-row">
+								<div><strong>{ rate.Name }</strong><small>{ fmt.Sprintf("%d minutes", rate.DurationMin) }</small></div>
+								<strong>{ api.Payments().FormatCurrency(rate.Price) }</strong>
+							</div>
+						}
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" data-bs-dismiss="modal">{ api.Translate("label", "Close") }</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ VenueInfoPage(api sdkapi.IPluginApi, rates []settings.CourtRate, bookingURL string, tutorials []settings.Tutorial, affiliateLinks []settings.AffiliateLink) {
+	<div class="pickleball-card court-rates-page venue-info-page">
+		<div class="pickleball-brand">
+			<h1 class="pickleball-brand-name">{ api.Translate("label", "Court Info") }</h1>
+			<p class="pickleball-brand-tagline">{ api.Translate("label", "Everything you need for your pickleball visit") }</p>
+		</div>
+		if bookingURL != "" {
+			<section class="venue-info-section venue-booking-section">
+				<a href={ templ.SafeURL(bookingURL) } target="_blank" rel="noopener noreferrer" class="btn btn-primary portal-action-btn">
+					<span class="btn-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
+					{ api.Translate("label", "Book a Court") }
+				</a>
+			</section>
+		}
+		<section class="venue-info-section pickleball-guide-section">
+			<h2 class="h5 text-start">{ api.Translate("label", "Pickleball Basics") }</h2>
+			<p class="text-start text-body-secondary small">{ api.Translate("label", "New to pickleball? Here are the essentials before you step on court.") }</p>
+			<div class="pickleball-guide-grid text-start">
+				<article class="pickleball-guide-card">
+					<span class="guide-icon" aria-hidden="true"><i class="bi bi-123"></i></span>
+					<h3>{ api.Translate("label", "Scoring") }</h3>
+					<p>{ api.Translate("label", "Games are usually played to 11 points and you must win by 2. In traditional scoring, only the serving side scores.") }</p>
+				</article>
+				<article class="pickleball-guide-card">
+					<span class="guide-icon" aria-hidden="true"><i class="bi bi-arrow-repeat"></i></span>
+					<h3>{ api.Translate("label", "Serve & two-bounce rule") }</h3>
+					<p>{ api.Translate("label", "Serve diagonally underhand, then let the serve and return bounce once before volleying.") }</p>
+				</article>
+				<article class="pickleball-guide-card">
+					<span class="guide-icon" aria-hidden="true"><i class="bi bi-bounding-box"></i></span>
+					<h3>{ api.Translate("label", "The Kitchen") }</h3>
+					<p>{ api.Translate("label", "You may stand in the non-volley zone, but you cannot volley while standing there or while momentum carries you into it.") }</p>
+				</article>
+			</div>
+			<div class="beginner-tips text-start">
+				<h3 class="h6">{ api.Translate("label", "Beginner tips") }</h3>
+				<ul>
+					<li>{ api.Translate("label", "Keep your serve simple and aim deep.") }</li>
+					<li>{ api.Translate("label", "Return the serve deep, then move toward the kitchen line.") }</li>
+					<li>{ api.Translate("label", "Call the score before every serve and keep your eyes on the ball.") }</li>
+				</ul>
+			</div>
+		</section>
+		if len(rates) > 0 {
+			<section class="venue-info-section venue-rates-section">
+				<h2 class="h5 text-start">{ api.Translate("label", "Court Rates") }</h2>
+				<div class="court-rates-list">
+					for _, rate := range rates {
+						<div class="court-rate-row"><div><strong>{ rate.Name }</strong><small>{ fmt.Sprintf("%d minutes", rate.DurationMin) }</small></div><strong>{ api.Payments().FormatCurrency(rate.Price) }</strong></div>
+					}
+				</div>
+			</section>
+		}
+		if len(tutorials) > 0 {
+			<section class="venue-info-section venue-tutorials-section">
+				<h2 class="h5 text-start">{ api.Translate("label", "How to Play") }</h2>
+				for _, tutorial := range tutorials {
+					<div class="tutorial-card text-start">
+						<h3 class="h6">{ tutorial.Title }</h3>
+						if isDirectVideoURL(tutorial.URL) {
+							<video class="w-100 rounded-3" controls preload="metadata" src={ templ.SafeURL(tutorial.URL) } style="max-height: 300px; object-fit: contain;">{ api.Translate("label", "Your browser does not support video playback.") }</video>
+						} else {
+							<div class="ratio ratio-16x9" style="max-height: 300px;"><iframe src={ templ.SafeURL(embedTutorialURL(tutorial.URL)) } title={ tutorial.Title } allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+						}
+					</div>
+				}
+			</section>
+		}
+		if len(affiliateLinks) > 0 {
+			<section class="venue-info-section venue-affiliates-section">
+				<h2 class="h5 text-start">{ api.Translate("label", "Recommended Gear & Services") }</h2>
+				<p class="text-start text-body-secondary small">{ api.Translate("label", "Helpful picks from our venue. Some links may earn us a commission.") }</p>
+				<div class="affiliate-grid">
+					for _, link := range affiliateLinks {
+						<div class="affiliate-card text-start">
+							if link.ImageURL != "" {
+								<img src={ templ.SafeURL(link.ImageURL) } alt={ link.Title }/>
+							}
+							if link.Category != "" {
+								<span class="affiliate-category">{ link.Category }</span>
+							}
+							<h3 class="h6">{ link.Title }</h3>
+							<a href={ templ.SafeURL(link.URL) } target="_blank" rel="sponsored noopener noreferrer" class="btn btn-outline-primary portal-action-btn affiliate-link-btn">{ api.Translate("label", "View Recommendation") }</a>
+						</div>
+					}
+				</div>
+			</section>
+		}
+		<a href="/" class="btn btn-outline-primary portal-action-btn mt-4 venue-back-btn">{ api.Translate("label", "Back to Portal") }</a>
+	</div>
+}
+
+templ CourtRatesPage(api sdkapi.IPluginApi, rates []settings.CourtRate) {
+	<div class="pickleball-card court-rates-page">
+		<div class="pickleball-brand">
+			<h1 class="pickleball-brand-name">{ api.Translate("label", "Court Rates") }</h1>
+			<p class="pickleball-brand-tagline">{ api.Translate("label", "Choose a pickleball session") }</p>
+		</div>
+		if len(rates) == 0 {
+			<p class="text-body-secondary">{ api.Translate("label", "Court rates are not available yet.") }</p>
+		} else {
+			<div class="court-rates-list">
+				for _, rate := range rates {
+					<div class="court-rate-row">
+						<div><strong>{ rate.Name }</strong><small>{ fmt.Sprintf("%d minutes", rate.DurationMin) }</small></div>
+						<strong>{ api.Payments().FormatCurrency(rate.Price) }</strong>
+					</div>
+				}
+			</div>
+		}
+		<a href="/" class="btn btn-outline-primary portal-action-btn mt-3">{ api.Translate("label", "Back to Portal") }</a>
+	</div>
+}
+
+// StatusBar is rendered by PortalStatusBarCtrl into the layout's status-bar
+// slot on every portal page.
+templ StatusBar(api sdkapi.IPluginApi, isConnected bool) {
+	if isConnected {
+		<div class="status-pill status-connected">
+			<span class="dot" aria-hidden="true"></span>
+			<span>{ api.Translate("label", "Connected") }</span>
+		</div>
+	} else {
+		<div class="status-pill status-disconnected">
+			<span class="dot" aria-hidden="true"></span>
+			<span>{ api.Translate("label", "Disconnected") }</span>
+		</div>
+	}
+}
+
+// MeterPart is one run of the formatted session figure -- either digits or
+// the unit letters that follow them ("11", "m", "12", "s").
+type MeterPart struct {
+	Text   string
+	IsUnit bool
+}
+
+// splitMeter breaks "11m 12s" into alternating numeric and unit runs so the
+// two can be typeset at different sizes. Must produce the identical split
+// to meterHTML() in resources/assets/portal/js/theme.js, which re-renders
+// the value each tick -- see that file's own comment.
+func splitMeter(s string) []MeterPart {
+	parts := []MeterPart{}
+	for _, r := range s {
+		if r == ' ' {
+			continue
+		}
+		isUnit := r < '0' || r > '9'
+		if n := len(parts); n > 0 && parts[n-1].IsUnit == isUnit {
+			parts[n-1].Text += string(r)
+			continue
+		}
+		parts = append(parts, MeterPart{Text: string(r), IsUnit: isUnit})
+	}
+	return parts
+}
+
+// queuedExtraTimeSecs is the portion of SessionSummary.TimeSecs contributed
+// by sessions still queued behind the active one -- see SessionInfo. Clamped
+// at 0 since Session and Summary are read a beat apart.
+func queuedExtraTimeSecs(session sdkapi.SessionData, summary sdkapi.SessionSummary) int {
+	if extra := summary.TimeSecs - session.TimeSecs; extra > 0 {
+		return extra
+	}
+	return 0
+}
+
+// queuedExtraDataMb is queuedExtraTimeSecs for the data dimension.
+func queuedExtraDataMb(session sdkapi.SessionData, summary sdkapi.SessionSummary) float64 {
+	if extra := summary.DataMb - session.DataMb; extra > 0 {
+		return extra
+	}
+	return 0
+}
+
+templ Meter(parts []MeterPart) {
+	for _, p := range parts {
+		if p.IsUnit {
+			<i class="meter-unit">{ p.Text }</i>
+		} else {
+			<span class="meter-num">{ p.Text }</span>
+		}
+	}
+}
+
+templ SessionInfo(api sdkapi.IPluginApi, clnt sdkapi.IClientDevice, session sdkapi.SessionData, summary sdkapi.SessionSummary, isRunning bool) {
+	if isRunning {
+		<div class={ "session-summary", templ.KV("is-paused", session.IsPaused) }>
+			<div class="session-metrics">
+				if summary.TimeSecs > 0 {
+					<div class="session-metric">
+						<span class="session-label">{ api.Translate("label", "Time Left") }</span>
+						if session.EnforcesTime() {
+							@api.UI().LiveSession(clnt).RemainingTimeSecsWithOpts(sdkapi.LiveSessionOpts{
+								Class:   "session-value",
+								Attrs:   templ.Attributes{"data-extra-time-secs": strconv.Itoa(queuedExtraTimeSecs(session, summary))},
+								Content: Meter(splitMeter(sdkutils.FormatTimeSecs(summary.TimeSecs))),
+							})
+						} else {
+							<span class="session-value">
+								@Meter(splitMeter(sdkutils.FormatTimeSecs(summary.TimeSecs)))
+							</span>
+						}
+					</div>
+				}
+				if summary.DataMb > 0 {
+					<div class="session-metric">
+						<span class="session-label">{ api.Translate("label", "Remaining Data") }</span>
+						if session.EnforcesData() {
+							@api.UI().LiveSession(clnt).RemainingDataMbWithOpts(sdkapi.LiveSessionOpts{
+								Class:   "session-value",
+								Attrs:   templ.Attributes{"data-extra-data-mb": strconv.FormatFloat(queuedExtraDataMb(session, summary), 'f', -1, 64)},
+								Content: Meter(splitMeter(sdkutils.FormatByteData(summary.DataMb))),
+							})
+						} else {
+							<span class="session-value">
+								@Meter(splitMeter(sdkutils.FormatByteData(summary.DataMb)))
+							</span>
+						}
+					</div>
+				}
+			</div>
+			<div class="session-state">
+				<span class="session-dot" aria-hidden="true"></span>
+				if session.IsPaused {
+					{ api.Translate("label", "Paused") }
+				} else {
+					{ api.Translate("label", "Running") }
+				}
+			</div>
+		</div>
+	}
+}
+
+templ InternetStatus(api sdkapi.IPluginApi, isOnline bool) {
+	if isOnline {
+		<p class="internet-state internet-up">
+			<span class="internet-dot" aria-hidden="true"></span>
+			{ api.Translate("label", "Internet is up") }
+		</p>
+	} else {
+		<p class="internet-state internet-down">
+			<span class="internet-dot" aria-hidden="true"></span>
+			{ api.Translate("label", "Internet is down") }
+		</p>
+	}
+}
+
+templ PortalLoginPage(api sdkapi.IPluginApi, csrfHTML string, brandName string, logoURL string, data sdkapi.LoginPageData) {
+	<div id="login" class="pickleball-card login-card">
+		<div class="pickleball-brand">
+			<img src={ logoURL } alt={ brandName } class="pickleball-brand-logo"/>
+		</div>
+		<h2 class="login-title">{ api.Translate("label", "Sign In") }</h2>
+		if data.LoginError != nil {
+			<div class="alert alert-danger">{ data.LoginError.Error() }</div>
+		}
+		<form id="login-form" method="POST" action={ templ.SafeURL(api.Http().Helpers().UrlForRoute("auth:login")) }>
+			@templ.Raw(csrfHTML)
+			<div class="mb-3">
+				<label for="username" class="form-label">{ api.Translate("label", "Username") }</label>
+				<input id="username" name="username" type="text" class="form-control" required/>
+			</div>
+			<div class="mb-3">
+				<label for="password" class="form-label">{ api.Translate("label", "Password") }</label>
+				<input id="password" name="password" type="password" class="form-control" required/>
+			</div>
+			<button type="submit" class="btn btn-primary d-block w-100">{ api.Translate("label", "Sign In") }</button>
+			for _, link := range data.LoginLinks {
+				<a href={ templ.SafeURL(link.Href) } class="forgot-password" { link.ExtraAttrs... }>{ link.Text }</a>
+			}
+		</form>
+	</div>
+}
+
+func isInsertCoinBtn(nav sdkapi.PortalNavItem) bool {
+	return nav.ExtraAttrs["id"] == "insert-coin-btn"
+}
+
+// navAttrsNoClass returns ExtraAttrs with "class" removed -- the action
+// button's color/outline class is chosen above based on isInsertCoinBtn,
+// regardless of any color class a plugin requests via ExtraAttrs["class"].
+func navAttrsNoClass(nav sdkapi.PortalNavItem) map[string]any {
+	attrs := make(map[string]any, len(nav.ExtraAttrs))
+	for k, v := range nav.ExtraAttrs {
+		if k != "class" {
+			attrs[k] = v
+		}
+	}
+	return attrs
+}

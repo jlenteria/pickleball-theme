@@ -1,0 +1,289 @@
+package admin
+
+import (
+	"fmt"
+	"strconv"
+
+	sdkapi "sdk/api"
+
+	"com.flarego.pickleball-theme/app/settings"
+)
+
+type SettingsData struct {
+	ClubName        string
+	LogoURL         string
+	HasCustomLogo   bool
+	SaveURL         string
+	DefaultName     string
+	CourtRates      []settings.CourtRate
+	BookingURL      string
+	Tutorials       []settings.Tutorial
+	BannerURL       string
+	HasCustomBanner bool
+	AffiliateLinks  []settings.AffiliateLink
+	Game            settings.GameSettings
+}
+
+// SettingsView is the admin page where the operator names their venue and
+// uploads a custom logo. Renders inside the active
+// admin theme's content area, so it adds no outer page padding of its own.
+templ SettingsView(api sdkapi.IPluginApi, data SettingsData) {
+	<div class="pickleball-settings">
+		<div class="pickleball-settings-hero">
+			<div class="d-flex align-items-center gap-3">
+				<span class="pickleball-settings-ball" aria-hidden="true">
+					<img src={ templ.SafeURL(api.Http().Helpers().PublicPath("images/pickleball-logo.svg")) } alt="" style="width: 64px; height: 64px;"/>
+				</span>
+				<div>
+					<p class="pickleball-eyebrow mb-1">{ api.Translate("label", "Venue experience") }</p>
+					<h1 class="h3 mb-1">{ api.Translate("label", "Pickleball Theme") }</h1>
+					<p class="text-body-secondary mb-0">{ api.Translate("label", "Make every guest's first connection feel like stepping onto your court.") }</p>
+				</div>
+			</div>
+			<div class="pickleball-settings-links" aria-label={ api.Translate("label", "Settings sections") }>
+				<a href="#venue-identity">{ api.Translate("label", "Identity") }</a>
+				<a href="#court-experience">{ api.Translate("label", "Court experience") }</a>
+				<a href="#guest-content">{ api.Translate("label", "Guest content") }</a>
+			</div>
+		</div>
+		<div class="alert alert-info mb-4" role="alert">
+			<div class="d-flex align-items-start gap-2">
+				<i class="bi bi-info-circle-fill" style="font-size: 1.25rem; margin-top: 0.125rem;"></i>
+				<div>
+					<strong>{ api.Translate("label", "Customize Your Venue") }</strong>
+					<p class="mb-0 mt-1 small">{ api.Translate("label", "Personalize your WiFi portal with your venue name, logo, court rates, and helpful resources. All changes update the guest experience immediately.") }</p>
+				</div>
+			</div>
+		</div>
+		<form
+			method="POST"
+			enctype="multipart/form-data"
+			style="display: flex; flex-direction: column;"
+			action={ templ.SafeURL(data.SaveURL) }
+		>
+			<div id="court-experience" class="card mb-3 rates-settings-card" style="order: 3;">
+				<div class="card-body d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
+					<div>
+						<h2 class="h6 mb-1">{ api.Translate("label", "Pickleball Court Rates") }</h2>
+						<p class="text-body-secondary small mb-0">
+							{ api.Translate("label", "Set the price and duration for court sessions, such as open play or private court time.") }
+						</p>
+					</div>
+					<div class="text-body-secondary small text-sm-end">
+						<div>{ api.Translate("label", "Currency") }: <strong>{ currentCurrency(api) }</strong></div>
+						<div>{ api.Translate("label", "Add rates below") }</div>
+					</div>
+				</div>
+				<div class="card-body border-top">
+					<div class="table-responsive">
+						<table class="table table-sm align-middle mb-3">
+							<thead><tr><th>{ api.Translate("label", "Session") }</th><th>{ api.Translate("label", "Duration") }</th><th>{ api.Translate("label", "Price") }</th><th></th></tr></thead>
+							<tbody>
+								for i, rate := range data.CourtRates {
+									<tr><td>{ rate.Name }</td><td>{ fmt.Sprintf("%d min", rate.DurationMin) }</td><td>{ api.Payments().FormatCurrency(rate.Price) }</td><td class="text-end"><button class="btn btn-outline-danger btn-sm" type="submit" name="remove_court_rate" value={ strconv.Itoa(i) }>{ api.Translate("label", "Remove") }</button></td></tr>
+								}
+							</tbody>
+						</table>
+					</div>
+					<div class="row g-2 align-items-end">
+						<div class="col-md-5"><label class="form-label small" for="court_rate_name">{ api.Translate("label", "Session name") }</label><input class="form-control" id="court_rate_name" name="court_rate_name" placeholder="Open Play" maxlength="80"/></div>
+						<div class="col-md-3"><label class="form-label small" for="court_rate_duration">{ api.Translate("label", "Minutes") }</label><input class="form-control" id="court_rate_duration" name="court_rate_duration" type="number" min="1" step="1" placeholder="60"/></div>
+						<div class="col-md-4"><label class="form-label small" for="court_rate_price">{ api.Translate("label", "Price") }</label><div class="input-group"><input class="form-control" id="court_rate_price" name="court_rate_price" type="number" min="0" step="0.01" placeholder="300.00"/><button class="btn btn-outline-primary" type="submit">{ api.Translate("label", "Add Rate") }</button></div></div>
+					</div>
+				</div>
+			</div>
+
+			<div id="venue-identity" class="card mb-3 venue-settings-card" style="order: 1;">
+				<div class="card-body">
+					<h2 class="h6 mb-3">{ api.Translate("label", "Venue Identity") }</h2>
+					
+					<label for="club_name" class="form-label fw-semibold">{ api.Translate("label", "Venue / Club Name") }</label>
+					<input
+						id="club_name"
+						type="text"
+						name="club_name"
+						class="form-control"
+						style="max-width: 420px;"
+						value={ data.ClubName }
+						placeholder={ data.DefaultName }
+						maxlength="80"
+					/>
+					<div class="form-text mb-4">
+						{ api.Translate("label", "Shown instead of the theme's own name, e.g. 'Riverside Pickleball Club'. Leave blank to just use the theme name.") }
+					</div>
+
+					<hr class="my-4"/>
+
+					<label class="form-label fw-semibold">{ api.Translate("label", "Current Logo") }</label>
+					<div class="d-flex align-items-center gap-3 mb-3">
+						<div class="logo-preview-box" style="max-height: 180px; overflow: hidden;">
+							<img src={ data.LogoURL } alt={ api.Translate("label", "Logo") } style="max-width: 100%; max-height: 180px; width: auto; height: auto; object-fit: contain;"/>
+						</div>
+						<div class="text-body-secondary small">
+							{ api.Translate("label", "Shown on the WiFi portal and login screen.") }
+						</div>
+					</div>
+					<label for="logo" class="form-label fw-semibold">{ api.Translate("label", "Upload Logo") }</label>
+					<input id="logo" type="file" name="logo" accept="image/*" class="form-control" style="max-width: 420px;"/>
+					<div class="form-text">
+						{ api.Translate("label", "A square image works best. PNG, JPG, WEBP, GIF, or SVG.") }
+					</div>
+					if data.HasCustomLogo {
+						<div class="form-check mt-3 mb-4">
+							<input class="form-check-input" type="checkbox" value="on" id="remove_logo" name="remove_logo"/>
+							<label class="form-check-label" for="remove_logo">
+								{ api.Translate("label", "Use the default Pickleball logo") }
+							</label>
+						</div>
+					} else {
+						<div class="mb-4"></div>
+					}
+
+					<hr class="my-4"/>
+
+					<label class="form-label fw-semibold">{ api.Translate("label", "Portal Banner") }</label>
+					<div class="pickleball-banner-preview mb-3" style="max-height: 180px; overflow: hidden;"><img src={ data.BannerURL } alt={ api.Translate("label", "Portal banner") } style="display: block; width: 100%; max-height: 180px; object-fit: contain;"/></div>
+					<input id="banner" type="file" name="banner" accept="image/*" class="form-control" style="max-width: 620px;"/>
+					<div class="form-text">{ api.Translate("label", "Upload a wide banner for the captive portal. PNG, JPG, WEBP, GIF, or SVG.") }</div>
+					if data.HasCustomBanner {
+						<div class="form-check mt-3 mb-4"><input class="form-check-input" type="checkbox" value="on" id="remove_banner" name="remove_banner"/><label class="form-check-label" for="remove_banner">{ api.Translate("label", "Use the default Pickleball banner") }</label></div>
+					} else {
+						<div class="mb-4"></div>
+					}
+
+					<hr class="my-4"/>
+
+					<label for="booking_url" class="form-label fw-semibold">{ api.Translate("label", "Court Booking Website") }</label>
+					<input
+						id="booking_url"
+						type="url"
+						name="booking_url"
+						class="form-control"
+						style="max-width: 620px;"
+						value={ data.BookingURL }
+						placeholder="https://your-pickleball-venue.com/book"
+					/>
+					<div class="form-text mb-4">
+						{ api.Translate("label", "Guests will see a Book a Court button on the captive portal. Leave blank to hide it.") }
+					</div>
+
+					<button type="submit" class="btn btn-primary save-settings-btn">
+						<i class="bi bi-save me-1"></i>{ api.Translate("label", "Save Changes") }
+					</button>
+				</div>
+			</div>
+
+			<div id="guest-content" class="card mb-3 tutorials-settings-card" style="order: 4;">
+				<div class="card-body">
+				<h2 class="h6 mb-1">{ api.Translate("label", "Pickleball Tutorials") }</h2>
+				<p class="text-body-secondary small mb-3">{ api.Translate("label", "Add videos or helpful links so guests can learn how to play.") }</p>
+				<div class="list-group mb-3">
+					for i, tutorial := range data.Tutorials {
+						<div class="list-group-item d-flex align-items-center justify-content-between gap-3">
+							<div class="text-truncate flex-grow-1">
+								<strong class="tutorial-preview-link" data-bs-toggle="modal" data-bs-target={ "#tutorial-preview-" + strconv.Itoa(i) }>{ tutorial.Title }</strong>
+								<div class="small text-body-secondary text-truncate">
+									if tutorial.VideoFile != "" {
+										{ api.Translate("label", "Uploaded video") }
+									} else {
+										{ tutorial.URL }
+									}
+								</div>
+							</div>
+							<button class="btn btn-outline-danger btn-sm flex-shrink-0" type="submit" name="remove_tutorial" value={ strconv.Itoa(i) }>{ api.Translate("label", "Remove") }</button>
+						</div>
+						<!-- Tutorial Preview Modal -->
+						<div class="modal fade pickleball-preview-modal" id={ "tutorial-preview-" + strconv.Itoa(i) } tabindex="-1" aria-labelledby={ "tutorial-preview-title-" + strconv.Itoa(i) } aria-hidden="true">
+							<div class="modal-dialog modal-dialog-centered modal-lg">
+								<div class="modal-content">
+									<div class="modal-header">
+										<h5 class="modal-title" id={ "tutorial-preview-title-" + strconv.Itoa(i) }>{ tutorial.Title }</h5>
+										<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ api.Translate("label", "Close") }></button>
+									</div>
+									<div class="modal-body">
+										if tutorial.VideoFile != "" {
+											<video class="w-100" controls preload="metadata" src={ templ.SafeURL(api.Storage().UrlFor(tutorial.VideoFile)) }>
+												{ api.Translate("label", "Your browser does not support video playback.") }
+											</video>
+										} else if isYouTubeURL(tutorial.URL) {
+											<div class="ratio ratio-16x9">
+												<iframe src={ templ.SafeURL(getYouTubeEmbedURL(tutorial.URL)) } title={ tutorial.Title } allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+											</div>
+										} else {
+											<div class="alert alert-info mb-0">
+												<p class="mb-2"><strong>{ api.Translate("label", "External Link") }</strong></p>
+												<a href={ templ.SafeURL(tutorial.URL) } target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+													{ api.Translate("label", "Open Tutorial") } <i class="bi bi-box-arrow-up-right ms-1"></i>
+												</a>
+											</div>
+										}
+									</div>
+								</div>
+							</div>
+						</div>
+					}
+				</div>
+					<div class="row g-2 align-items-end">
+						<div class="col-md-3"><label class="form-label small" for="tutorial_title">{ api.Translate("label", "Tutorial title") }</label><input class="form-control" id="tutorial_title" name="tutorial_title" placeholder="How to score" maxlength="100"/></div>
+						<div class="col-md-4"><label class="form-label small" for="tutorial_url">{ api.Translate("label", "Video or website link") }</label><input class="form-control" id="tutorial_url" name="tutorial_url" type="url" placeholder="https://youtube.com/..."/></div>
+						<div class="col-md-3"><label class="form-label small" for="tutorial_video">{ api.Translate("label", "Or upload video (optional)") }</label><input class="form-control" type="file" id="tutorial_video" name="tutorial_video" accept="video/mp4,video/webm,video/quicktime"/></div>
+						<div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">{ api.Translate("label", "Add Tutorial") }</button></div>
+					</div>
+					<div class="form-text mt-2">{ api.Translate("label", "Provide a link OR upload a video file (MP4, WEBM, or MOV).") }</div>
+				</div>
+			</div>
+			<div class="card mb-3 affiliates-settings-card" style="order: 5;">
+				<div class="card-body">
+					<h2 class="h6 mb-1">{ api.Translate("label", "Recommended Gear & Services") }</h2>
+					<p class="text-body-secondary small mb-3">{ api.Translate("label", "Add affiliate links for paddles, balls, shoes, coaching, and other recommendations.") }</p>
+					<div class="list-group mb-3">
+						for i, link := range data.AffiliateLinks {
+							<div class="list-group-item d-flex align-items-center justify-content-between gap-3">
+								<div class="text-truncate flex-grow-1">
+									<strong class="tutorial-preview-link" data-bs-toggle="modal" data-bs-target={ "#affiliate-preview-" + strconv.Itoa(i) }>{ link.Title }</strong>
+									<div class="small text-body-secondary text-truncate">{ link.Category } · { link.URL }</div>
+								</div>
+								<button class="btn btn-outline-danger btn-sm flex-shrink-0" type="submit" name="remove_affiliate" value={ strconv.Itoa(i) }>{ api.Translate("label", "Remove") }</button>
+							</div>
+							<!-- Affiliate Preview Modal -->
+							<div class="modal fade pickleball-preview-modal" id={ "affiliate-preview-" + strconv.Itoa(i) } tabindex="-1" aria-labelledby={ "affiliate-preview-title-" + strconv.Itoa(i) } aria-hidden="true">
+								<div class="modal-dialog modal-dialog-centered modal-lg">
+									<div class="modal-content">
+										<div class="modal-header">
+											<h5 class="modal-title" id={ "affiliate-preview-title-" + strconv.Itoa(i) }>{ link.Title }</h5>
+											<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label={ api.Translate("label", "Close") }></button>
+										</div>
+										<div class="modal-body">
+											if link.ImageFile != "" && api.Storage().Exists(link.ImageFile) {
+												<img src={ templ.SafeURL(api.Storage().UrlFor(link.ImageFile)) } alt={ link.Title } class="img-fluid rounded mb-3" style="max-height: 300px; width: 100%; object-fit: cover;"/>
+											} else if link.ImageURL != "" {
+												<img src={ templ.SafeURL(link.ImageURL) } alt={ link.Title } class="img-fluid rounded mb-3" style="max-height: 300px; width: 100%; object-fit: cover;"/>
+											}
+											if link.Category != "" {
+												<span class="badge bg-primary mb-2">{ link.Category }</span>
+											}
+											<p class="text-body-secondary small mb-3">{ link.URL }</p>
+											<a href={ templ.SafeURL(link.URL) } target="_blank" rel="sponsored noopener noreferrer" class="btn btn-primary">
+												{ api.Translate("label", "View Recommendation") } <i class="bi bi-box-arrow-up-right ms-1"></i>
+											</a>
+										</div>
+									</div>
+								</div>
+							</div>
+						}
+					</div>
+					<div class="row g-2 align-items-end">
+						<div class="col-md-3"><label class="form-label small" for="affiliate_title">{ api.Translate("label", "Recommendation") }</label><input class="form-control" id="affiliate_title" name="affiliate_title" placeholder="Our favorite paddle" maxlength="100"/></div>
+						<div class="col-md-2"><label class="form-label small" for="affiliate_category">{ api.Translate("label", "Category") }</label><input class="form-control" id="affiliate_category" name="affiliate_category" placeholder="Paddles" maxlength="60"/></div>
+						<div class="col-md-3"><label class="form-label small" for="affiliate_url">{ api.Translate("label", "Affiliate link") }</label><input class="form-control" id="affiliate_url" name="affiliate_url" type="url" placeholder="https://..."/></div>
+						<div class="col-md-2"><label class="form-label small" for="affiliate_image_url">{ api.Translate("label", "Preview image URL") }</label><input class="form-control" id="affiliate_image_url" name="affiliate_image_url" type="url" placeholder="https://..."/></div>
+						<div class="col-md-2"><label class="form-label small" for="affiliate_image">{ api.Translate("label", "Or upload image") }</label><input class="form-control" id="affiliate_image" name="affiliate_image" type="file" accept="image/*"/></div>
+						<div class="col-md-1"><button class="btn btn-outline-primary w-100" type="submit">{ api.Translate("label", "Add") }</button></div>
+					</div>
+				</div>
+			</div>
+
+
+		</form>
+	</div>
+}

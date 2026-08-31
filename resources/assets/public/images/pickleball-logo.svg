@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Pickleball paddle and ball">
+  <defs>
+    <linearGradient id="paddleFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E7C7B"/>
+      <stop offset="100%" stop-color="#0A5958"/>
+    </linearGradient>
+  </defs>
+  <!-- Paddle -->
+  <g>
+    <rect x="24" y="10" width="60" height="76" rx="30" fill="url(#paddleFace)" stroke="#083F3E" stroke-width="3"/>
+    <rect x="49" y="82" width="10" height="30" rx="4" fill="#083F3E"/>
+    <rect x="42" y="106" width="24" height="10" rx="5" fill="#083F3E"/>
+    <!-- Paddle face texture dots -->
+    <g fill="#0A5958" opacity="0.35">
+      <circle cx="38" cy="30" r="2.4"/>
+      <circle cx="50" cy="26" r="2.4"/>
+      <circle cx="62" cy="24" r="2.4"/>
+      <circle cx="74" cy="28" r="2.4"/>
+      <circle cx="34" cy="42" r="2.4"/>
+      <circle cx="46" cy="40" r="2.4"/>
+      <circle cx="58" cy="38" r="2.4"/>
+      <circle cx="70" cy="40" r="2.4"/>
+      <circle cx="80" cy="44" r="2.4"/>
+      <circle cx="36" cy="54" r="2.4"/>
+      <circle cx="48" cy="54" r="2.4"/>
+      <circle cx="60" cy="52" r="2.4"/>
+      <circle cx="72" cy="54" r="2.4"/>
+      <circle cx="40" cy="66" r="2.4"/>
+      <circle cx="52" cy="66" r="2.4"/>
+      <circle cx="64" cy="66" r="2.4"/>
+      <circle cx="76" cy="64" r="2.4"/>
+    </g>
+  </g>
+  <!-- Ball -->
+  <g>
+    <circle cx="96" cy="90" r="20" fill="#C6E92B" stroke="#8FA918" stroke-width="2.5"/>
+    <g fill="#8FA918">
+      <circle cx="88" cy="80" r="2"/>
+      <circle cx="100" cy="78" r="2"/>
+      <circle cx="106" cy="88" r="2"/>
+      <circle cx="100" cy="98" r="2"/>
+      <circle cx="88" cy="99" r="2"/>
+      <circle cx="82" cy="90" r="2"/>
+      <circle cx="96" cy="90" r="2"/>
+    </g>
+  </g>
+</svg>

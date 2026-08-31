@@ -1,0 +1,13 @@
+{
+  "theme.css": [
+    "./shared/css/brand.css",
+    "./shared/css/buttons.css",
+    "./portal/css/theme.css"
+  ],
+  "theme-accent.css": [
+    "./shared/css/bootstrap-accent.css"
+  ],
+  "theme.js": [
+    "./portal/js/theme.js"
+  ]
+}

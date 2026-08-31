@@ -1,0 +1,76 @@
+package portal
+
+import (
+	"fmt"
+
+	sdkapi "sdk/api"
+)
+
+type PortalLayoutData struct {
+	API        sdkapi.IPluginApi
+	Components sdkapi.IThemeComponents
+	BrandName  string
+	// ThemeID is the currently selected theme's registry ID ("pickleball",
+	// ...). It reaches the rendered page as a body-level `theme-<id>` class
+	// (combined with the base `pickleball-portal` one in the body tag below),
+	// which gates the theme-specific ambient stage and button styling in
+	// resources/assets/portal/css/theme.css. See app/pickleball.
+	ThemeID string
+	// AccentStyle is the raw inline-<style> body that pins Bootstrap's accent
+	// tokens to the currently selected theme -- see app/theme/accent.go.
+	AccentStyle string
+	// ShowStatusBar keeps the connection banner off the auth pages that share
+	// this layout (login, and the admin-security plugin's forgot-password
+	// flow) but report on an admin account rather than a client device.
+	ShowStatusBar bool
+}
+
+templ PortalLayout(data PortalLayoutData) {
+	<!DOCTYPE html>
+	<html lang="en" { data.Components.HtmlAttrs()... }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta http-equiv="X-UA-Compatible" content="IE=EDGE"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ data.BrandName } WiFi</title>
+			@data.Components.Head()
+			@templ.Raw(data.AccentStyle)
+		</head>
+		<body class={ "pickleball-portal theme-" + data.ThemeID } { data.Components.BodyAttrs()... }>
+			<div class="pickleball-bg-scene" aria-hidden="true">
+				<span class="pickleball-bg-court"></span>
+				<span class="pickleball-bg-court-lines"></span>
+				<span class="pickleball-bg-net"></span>
+				<span class="pickleball-bg-serve-left"></span>
+				<span class="pickleball-bg-serve-right"></span>
+			</div>
+			<div class="pickleball-app">
+				<div class="container">
+					if data.ShowStatusBar {
+						// Rendered EMPTY and filled by the `load` trigger rather than
+						// server-side -- resolving connection state costs an `nft`
+						// exec on a shared, 30s-timeout worker queue, which must not
+						// sit on the render path of every portal page. The endpoint
+						// returns nothing when no client device resolves, so an auth
+						// page that slips past ShowStatusBar's own gating collapses
+						// this slot instead of showing a wrong "Disconnected".
+						<div
+							class="status-bar-slot"
+							hx-get={ data.API.Http().Helpers().UrlForRoute("portal-theme:pickleball-theme:status-bar") }
+							hx-trigger={ fmt.Sprintf("load, sse:%s, sse:%s",
+								sdkapi.PortalEventSessionConnected, sdkapi.PortalEventSessionDisconnected) }
+							hx-swap="innerHTML"
+						></div>
+					}
+					@data.Components.PageContent()
+				</div>
+			</div>
+			<footer class="pickleball-footer">
+				<div class="container text-center">
+					<small>{ "A product of " } <a href="https://flarego.ph" target="_blank"><b>Flarego</b></a></small>
+				</div>
+			</footer>
+			@data.Components.Scripts()
+		</body>
+	</html>
+}

@@ -1,0 +1,93 @@
+/* Bootstrap 5.3.3 accent remap — maps the brand tokens (shared/css/brand.css)
+   onto Bootstrap's own CSS variables so EVERY component follows the active
+   theme's colour: links, badges/utilities, nav pills, focus rings, form
+   controls, pagination, progress bars. Button contracts (--bs-btn-*) live in
+   shared/css/buttons.css and are deliberately NOT repeated here.
+
+   Registered under the "theme-accent.css" manifest key on both surfaces and
+   declared via ThemeCssFiles in app/theme/admin.go / app/theme/portal.go, so
+   it loads on every page while this theme is active and unloads entirely
+   when another theme is selected.
+
+   Three tiers, per the canonical accent block (see the SDK docs' "Theming
+   Bootstrap with an accent block"):
+     (b) root-level vars — one :root remap propagates;
+     (c) component-scoped vars — Bootstrap declares these on the component's
+         own selector, so :root can't reach them; re-declared on the
+         identical selector (this bundle loads after core's Bootstrap,
+         source order wins);
+     (d) hardcoded rules with no variable — need real CSS rules. */
+
+/* (b) root-level remap ---------------------------------------------------- */
+:root {
+  --bs-link-color: var(--brand-primary);
+  --bs-link-color-rgb: var(--brand-primary-rgb);
+  --bs-link-hover-color: var(--brand-primary-dark);
+  --bs-link-hover-color-rgb: var(--brand-primary-rgb);
+  --bs-focus-ring-color: rgba(var(--brand-primary-rgb), 0.25);
+  --bs-primary-text-emphasis: var(--brand-primary-dark);
+  --bs-primary-bg-subtle: var(--brand-primary-soft);
+  --bs-primary-border-subtle: var(--brand-primary);
+}
+
+/* (c) component-scoped var remaps ----------------------------------------- */
+.dropdown-menu {
+  --bs-dropdown-link-active-color: #fff;
+  --bs-dropdown-link-active-bg: var(--brand-primary);
+}
+.nav-pills {
+  --bs-nav-pills-link-active-color: #fff;
+  --bs-nav-pills-link-active-bg: var(--brand-primary);
+}
+.accordion {
+  --bs-accordion-btn-focus-box-shadow: 0 0 0 0.25rem rgba(var(--brand-primary-rgb), 0.25);
+}
+.pagination {
+  --bs-pagination-focus-box-shadow: 0 0 0 0.25rem rgba(var(--brand-primary-rgb), 0.25);
+  --bs-pagination-active-color: #fff;
+  --bs-pagination-active-bg: var(--brand-primary);
+  --bs-pagination-active-border-color: var(--brand-primary);
+}
+.progress,
+.progress-stacked {
+  --bs-progress-bar-color: #fff;
+  --bs-progress-bar-bg: var(--brand-primary);
+}
+.list-group {
+  --bs-list-group-active-color: #fff;
+  --bs-list-group-active-bg: var(--brand-primary);
+  --bs-list-group-active-border-color: var(--brand-primary);
+}
+.btn-close {
+  --bs-btn-close-focus-shadow: 0 0 0 0.25rem rgba(var(--brand-primary-rgb), 0.25);
+}
+
+/* (d) hardcoded-rule overrides (no variable exists in Bootstrap 5.3.3) ---- */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 0.25rem rgba(var(--brand-primary-rgb), 0.25);
+}
+.form-check-input:checked,
+.form-check-input[type="checkbox"]:indeterminate {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+.nav-link:focus-visible {
+  box-shadow: 0 0 0 0.25rem rgba(var(--brand-primary-rgb), 0.25);
+}
+/* -webkit- and -moz- selectors must stay separate rules: one unrecognized
+   vendor pseudo-element voids the whole rule in the other browser. */
+.form-range::-webkit-slider-thumb {
+  background-color: var(--brand-primary);
+}
+.form-range::-moz-range-thumb {
+  background-color: var(--brand-primary);
+}
+.form-range::-webkit-slider-thumb:active {
+  background-color: var(--brand-primary-dark);
+}
+.form-range::-moz-range-thumb:active {
+  background-color: var(--brand-primary-dark);
+}

@@ -1,0 +1,10 @@
+{
+  "settings.css": [
+    "./shared/css/brand.css",
+    "./shared/css/buttons.css",
+    "./admin/css/settings.css"
+  ],
+  "settings.js": [
+    "./admin/js/settings.js"
+  ]
+}

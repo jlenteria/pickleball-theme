@@ -1,0 +1,55 @@
+/* Pickleball Theme brand tokens — the single source of truth for accent colour.
+   ============================================================================
+
+   Loaded by BOTH surfaces: it is the first entry of the "theme.css" bundle in
+   manifest.admin.json and manifest.portal.json.
+
+   The values below are the DEFAULT palette (Pickleball) baked into the CSS
+   file itself, so the theme still looks right the very first time it loads,
+   before any request has run. Every actual page render additionally emits a
+   small inline <style data-theme-accent> block (see app/theme/accent.go)
+   re-declaring these same custom properties from the admin's CURRENTLY
+   SAVED theme (app/settings + app/pickleball) — inline styles win over an
+   external stylesheet at equal specificity, so that block is what lets
+   admin and portal repaint together the moment the theme selection changes,
+   with no CSS rebuild.
+
+   Re-point Bootstrap's own `primary` slot at the brand
+   -----------------------------------------------------
+   buttons.css restyles .btn-primary/.btn-outline-primary through the
+   --bs-btn-* contract, which fixes BUTTONS only. Every other primary-
+   semantic utility (.text-primary, .bg-primary, .border-primary,
+   .link-primary) resolves from --bs-primary/--bs-primary-rgb instead, so
+   both are re-pointed here too. Semantic variants (success/danger/warning)
+   are deliberately left alone — those encode meaning, not brand. */
+
+:root {
+  --brand-primary: #0e7c7b;
+  --brand-primary-dark: #0a5958;
+  --brand-primary-rgb: 14, 124, 123;
+  --brand-primary-soft: #e3f5f4;
+  --brand-accent: #c6e92b;
+  --brand-accent-rgb: 198, 233, 43;
+
+  --brand-gradient: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+
+  --bs-primary: var(--brand-primary);
+  --bs-primary-rgb: var(--brand-primary-rgb);
+}
+
+/* Component slots Bootstrap compiled from $primary as a literal #0d6efd,
+   which the :root re-point above cannot reach — each is declared on the
+   component's own selector, so it must be restated at the same selector. */
+.progress,
+.progress-stacked {
+  --bs-progress-bar-bg: var(--brand-primary);
+}
+
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--brand-primary);
+}
+
+.pagination {
+  --bs-pagination-active-bg: var(--brand-primary);
+  --bs-pagination-active-border-color: var(--brand-primary);
+}

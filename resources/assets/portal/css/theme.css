@@ -1,0 +1,1777 @@
+/* Pickleball Theme — captive portal.
+   ============================================================================
+   A single animated card floating on the active theme's gradient backdrop:
+   drifting colour blobs, a slowly-marching pickleball field, a pulsing
+   brand halo and live session panel, staggered entry animations, hover
+   lift/sheen on the action buttons, and -- per selected theme -- a clean
+   ambient backdrop (for pickleball: a full lit court with its kitchen boxes
+   and net, no ball or motion) plus pickleball-shaped action buttons.
+
+   See resources/views/portal/layout.templ + index.templ for the markup, and
+   .claude/rules/theme-vs-content-styling*.md for the rules this file follows
+   (Rule 4: full-viewport height via a flex shell + `margin-block: auto`/
+   `safe center`, never `min-vh-100` on the page itself).
+
+   Every decorative animation is drawn from the brand tokens
+   (shared/css/brand.css + the inline theme-accent block), so a new theme
+   recolors the whole stage — blobs, halos, pings and sheens included.
+
+   All continuous/ambient motion is gated behind
+   `prefers-reduced-motion: no-preference` (bottom of file). */
+
+/* ---- Page tokens ------------------------------------------------------- */
+.pickleball-portal {
+  --sp-ink: #172b33;
+  --sp-ink-2: #4c626b;
+  --sp-ink-3: #74878e;
+  --sp-card-bg: rgba(255, 255, 255, 0.95);
+  --sp-soft-line: rgba(var(--brand-primary-rgb), 0.28);
+}
+
+body.pickleball-portal {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  color: #fff;
+  background:
+    radial-gradient(1000px 480px at 50% -8%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 60%),
+    radial-gradient(900px 520px at 85% 110%, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 60%),
+    linear-gradient(160deg, var(--brand-primary) 0%, var(--brand-primary-dark) 110%);
+  background-attachment: fixed;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Drifting accent blob */
+body.pickleball-portal::before {
+  content: "";
+  position: fixed;
+  top: -14%;
+  right: -16%;
+  width: 560px;
+  height: 560px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--brand-accent-rgb), 0.34) 0%, rgba(var(--brand-accent-rgb), 0) 68%);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Slow-marching pickleball field: a sparse grid of tiny white pickleballs --
+   each a white ball wearing a + of darker holes -- drifting across the
+   backdrop (see @keyframes pickleball-dots). One layer draws the white ball, the
+   four dimple layers sit just off it; all share a single 110px repeating
+   tile so the dimples stay locked to their ball. */
+body.pickleball-portal::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(circle at 20px 20px, rgba(255, 255, 255, 0.16) 0 5px, transparent 5px),
+    radial-gradient(rgba(7, 51, 55, 0.25) 0 1px, transparent 1px),
+    radial-gradient(rgba(7, 51, 55, 0.25) 0 1px, transparent 1px),
+    radial-gradient(rgba(7, 51, 55, 0.25) 0 1px, transparent 1px),
+    radial-gradient(rgba(7, 51, 55, 0.25) 0 1px, transparent 1px);
+  background-size: 110px 110px;
+  background-position:
+    0 0,
+    16px 16px, 24px 20px, 20px 24px, 20px 16px;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.pickleball-portal::before {
+    animation: pickleball-blob 22s ease-in-out infinite alternate;
+  }
+  body.pickleball-portal::after {
+    animation: pickleball-dots 90s linear infinite;
+  }
+}
+
+.pickleball-app {
+  position: relative;
+  z-index: 1;
+  flex: 1 0 auto;
+  width: 100%;
+  padding: clamp(12px, 3vw, 28px) 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+}
+
+/* ---- Theme-specific ambient stage ----------------------------------------
+   An inert, empty layer on every page: each theme's block below (so far only
+   `.theme-pickleball`) reveals just the fragments it draws. The scene never
+   intercepts input and sits beneath the app shell (`z-index: 0` vs the card
+   shell's `1`). Everything is drawn from the brand tokens so a new theme
+   recolors the stage by swapping its own block. */
+.pickleball-bg-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pickleball-bg-scene > * {
+  position: absolute;
+  display: none;
+}
+
+/* Pickleball: a clean, static court backdrop. A lit court floor recedes into
+   the bottom with its full line grid (baseline, sidelines, center line and
+   the two kitchen/non-volley-zone boxes), a net spanning the top, and soft
+   glows behind the card -- no ball, no motion. All court markings are drawn
+   in translucent white, so any brand accent recolors the whole court. */
+.theme-pickleball .pickleball-bg-scene > * {
+  display: block;
+}
+
+/* The whole court, drawn in a single element is impractical in one gradient,
+   so the floor's surface and its line grid are two stacked pseudo-layers:
+   .pickleball-bg-court (the tiled floor tint) + .pickleball-bg-court-lines (the
+   markings), both sharing one tilted plane so their seams can't diverge. */
+.theme-pickleball .pickleball-bg-court,
+.theme-pickleball .pickleball-bg-court-lines {
+  left: 50%;
+  bottom: -30vh;
+  width: 150vmin;
+  height: 150vmin;
+  transform: translateX(-50%) perspective(900px) rotateX(38deg);
+  transform-style: preserve-3d;
+  transform-origin: bottom center;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 -30px 120px -20px rgba(3, 12, 14, 0.35);
+}
+
+/* Floor tint: subtle sheen + horizontal grain so the plane reads as lit. */
+.theme-pickleball .pickleball-bg-court {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(255, 255, 255, 0.1) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 120px);
+}
+
+/* Line grid: parallel rails running away from the viewer (baseline at the
+   bottom, two service rails above it, center line down the middle), drawn as
+   stacked translucent-white gradient layers that fade with distance. */
+.theme-pickleball .pickleball-bg-court-lines {
+  border-color: transparent;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 2px), rgba(255, 255, 255, 0.5) calc(50% - 2px), rgba(255, 255, 255, 0.5) calc(50% + 2px), transparent calc(50% + 2px)),
+    linear-gradient(180deg, transparent 49%, rgba(255, 255, 255, 0.5) 49%, rgba(255, 255, 255, 0.5) 49.7%, transparent 49.7%),
+    linear-gradient(180deg, transparent 74%, rgba(255, 255, 255, 0.5) 74%, rgba(255, 255, 255, 0.5) 74.7%, transparent 74.7%),
+    linear-gradient(180deg, transparent calc(86% - 2px), rgba(255, 255, 255, 0.6) calc(86% - 2px), rgba(255, 255, 255, 0.6) 86%, transparent 86.3%);
+}
+
+/* The two kitchen (non-volley-zone) boxes: shallow shaded slabs between the
+   net and the service line, one per side of the center line. */
+.theme-pickleball .pickleball-bg-serve-left,
+.theme-pickleball .pickleball-bg-serve-right {
+  bottom: 50%;
+  width: 25%;
+  height: 25%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 0;
+  transform: perspective(900px) rotateX(38deg);
+  transform-origin: bottom center;
+}
+.theme-pickleball .pickleball-bg-serve-left {
+  left: 25%;
+}
+.theme-pickleball .pickleball-bg-serve-right {
+  right: 25%;
+}
+
+/* The net: a white rail with a fine mesh grid, closer to the viewer than the
+   kitchen boxes, sitting on its own tilted plane. */
+.theme-pickleball .pickleball-bg-net {
+  left: 15%;
+  right: 15%;
+  bottom: 44%;
+  height: 6vmin;
+  transform: perspective(900px) rotateX(52deg);
+  transform-origin: bottom center;
+  border-top: 2px solid rgba(255, 255, 255, 0.75);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.4) 0 1.5px, transparent 1.5px 18px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.05));
+  mask-image: linear-gradient(180deg, #000 0%, transparent 96%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 96%);
+  box-shadow: 0 10px 30px -8px rgba(3, 12, 14, 0.3);
+}
+
+/* A single floating pickleball gives the stage a friendly focal point without
+   competing with the portal card. It is a pseudo-element so the markup stays
+   shared by every theme and the accent automatically follows the selected
+   palette. */
+.theme-pickleball .pickleball-bg-scene::before {
+  content: "";
+  position: absolute;
+  top: 13%;
+  right: 12%;
+  width: clamp(34px, 5vw, 64px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.9) 0 4%, transparent 5%),
+    radial-gradient(circle at 69% 31%, rgba(255, 255, 255, 0.55) 0 3%, transparent 4%),
+    radial-gradient(circle at 48% 69%, rgba(255, 255, 255, 0.55) 0 3%, transparent 4%),
+    var(--brand-accent);
+  box-shadow: 0 14px 28px -10px rgba(3, 12, 14, 0.6), 0 0 0 8px rgba(var(--brand-accent-rgb), 0.14);
+  opacity: 0.92;
+}
+.theme-pickleball .pickleball-bg-scene::after {
+  content: "";
+  position: absolute;
+  top: calc(13% + clamp(34px, 5vw, 64px) + 12px);
+  right: calc(12% + 4px);
+  width: clamp(26px, 4vw, 48px);
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(3, 12, 14, 0.22);
+  filter: blur(5px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .theme-pickleball .pickleball-bg-scene::before {
+    animation: pickleball-ball-float 5.5s ease-in-out infinite;
+  }
+  .theme-pickleball .pickleball-bg-scene::after {
+    animation: pickleball-ball-shadow 5.5s ease-in-out infinite;
+  }
+}
+
+/* Buttons shaped for the selected court pickleball -- the round pickleball paddle
+   head with an accent rim (the ball's yellow seam). Applied to every button
+   this theme renders, from the portal action buttons to the voucher Apply. */
+.theme-pickleball .portal-action-btn,
+.theme-pickleball .voucher-apply {
+  border-radius: 30px 30px 15px 15px;
+  border-width: 2px;
+  outline: none;
+}
+.theme-pickleball .btn-primary.portal-action-btn,
+.theme-pickleball .btn-primary.voucher-apply {
+  border-color: var(--brand-accent);
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.28);
+  background-clip: padding-box;
+}
+.theme-pickleball .btn-primary.portal-action-btn:hover,
+.theme-pickleball .btn-primary.voucher-apply:hover {
+  border-color: var(--brand-accent);
+  box-shadow: 0 16px 28px -14px rgba(var(--brand-accent-rgb), 0.55), inset 0 2px 3px rgba(255, 255, 255, 0.28);
+  outline: none;
+}
+
+.pickleball-card {
+  --sp-card: var(--sp-card-bg);
+  position: relative;
+  overflow: hidden;
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 30px 26px 32px;
+  background: var(--sp-card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 26px;
+  box-shadow:
+    0 30px 60px -18px rgba(3, 12, 14, 0.55),
+    0 8px 24px -12px rgba(3, 12, 14, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  color: var(--sp-ink);
+  text-align: center;
+  isolation: isolate;
+}
+
+/* ---- Guest mini-game --------------------------------------------------- */
+.pickleball-game {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(10,89,88,.92), rgba(14,124,123,.78));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+}
+.game-heading, .game-controls { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.game-kicker { color: var(--brand-accent); font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.pickleball-game h2 { margin: .1rem 0 0; font-size: 1.2rem; color: #fff; }
+.game-score { padding: .35rem .65rem; border-radius: 999px; color: #103c3c; background: var(--brand-accent); font-weight: 800; white-space: nowrap; font-size: .85rem; }
+.game-mode-toggle {
+  padding: .25rem .6rem;
+  font-size: .75rem;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255,255,255,.5);
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.game-mode-toggle:hover {
+  background: rgba(255,255,255,.2);
+  border-color: rgba(255,255,255,.75);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,.2);
+}
+.game-mode-toggle:active {
+  transform: translateY(0);
+}
+.game-copy, .game-status { margin: .65rem 0; font-size: .82rem; color: rgba(255,255,255,.86); }
+.game-status { min-height: 1.2em; margin-bottom: 0; text-align: center; }
+.game-court { 
+  position: relative; 
+  height: 160px; 
+  margin: .8rem 0; 
+  perspective: 800px;
+  cursor: pointer;
+}
+.game-court::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255,255,255,.85);
+  border-radius: 16px;
+  background: 
+    linear-gradient(180deg, 
+      rgba(10,89,88,.4) 0%, 
+      rgba(14,124,123,.65) 50%, 
+      rgba(10,89,88,.8) 100%),
+    linear-gradient(90deg, 
+      rgba(198,233,43,.12) 49.3%, 
+      rgba(255,255,255,.85) 49.3%, 
+      rgba(255,255,255,.85) 50.7%, 
+      rgba(198,233,43,.12) 50.7%);
+  transform: rotateX(48deg) translateZ(-10px);
+  transform-style: preserve-3d;
+  transform-origin: bottom center;
+  box-shadow: 
+    0 20px 40px -15px rgba(0,0,0,.5),
+    inset 0 -30px 40px -20px rgba(0,0,0,.3),
+    inset 0 2px 4px rgba(255,255,255,.2);
+}
+.game-net { 
+  position: absolute; 
+  top: 38%; 
+  bottom: 0; 
+  left: 50%; 
+  width: 3px; 
+  background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.7) 100%);
+  transform: translateX(-50%) translateZ(15px);
+  transform-style: preserve-3d;
+  box-shadow: 
+    0 0 8px rgba(255,255,255,.6),
+    2px 0 12px rgba(0,0,0,.4);
+}
+.game-net::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    repeating-linear-gradient(0deg, 
+      rgba(255,255,255,.3) 0px, 
+      rgba(255,255,255,.3) 1px, 
+      transparent 1px, 
+      transparent 8px);
+  mask-image: linear-gradient(180deg, #000 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent 100%);
+}
+.game-ball { 
+  position: absolute; 
+  z-index: 10; 
+  top: 50%; 
+  left: 12%; 
+  width: 20px; 
+  height: 20px; 
+  border-radius: 50%; 
+  background: 
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,.9) 0%, transparent 8%),
+    radial-gradient(circle at 65% 35%, rgba(255,255,255,.6) 0%, transparent 6%),
+    radial-gradient(circle at 50% 65%, rgba(255,255,255,.5) 0%, transparent 5%),
+    radial-gradient(circle at 30% 70%, rgba(0,0,0,.2) 0%, transparent 4%),
+    var(--brand-accent);
+  box-shadow: 
+    0 8px 16px rgba(0,0,0,.35),
+    0 4px 8px rgba(0,0,0,.25),
+    inset -2px -3px 6px rgba(0,0,0,.2),
+    inset 2px 2px 4px rgba(255,255,255,.4),
+    0 0 0 2px rgba(var(--brand-accent-rgb),.3);
+  transform: translate(-50%, -50%) translateZ(25px);
+  transform-style: preserve-3d;
+}
+.game-ball::after {
+  content: "";
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  width: 18px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.4);
+  filter: blur(4px);
+  transform: translateX(-50%) rotateX(75deg);
+  opacity: .7;
+}
+.game-ball-moving { animation: pickleball-rally-3d 900ms cubic-bezier(.45,.05,.55,.95) infinite alternate; }
+.game-paddle { 
+  position: absolute; 
+  top: 50%; 
+  width: 16px; 
+  height: 52px; 
+  border-radius: 12px 12px 6px 6px;
+  background: 
+    linear-gradient(135deg, 
+      rgba(255,255,255,.2) 0%, 
+      transparent 40%),
+    var(--brand-accent);
+  transform: translateY(-50%) translateZ(8px);
+  transform-style: preserve-3d;
+  box-shadow: 
+    0 6px 12px rgba(0,0,0,.3),
+    inset 1px 1px 2px rgba(255,255,255,.3),
+    inset -1px -1px 2px rgba(0,0,0,.2);
+  border: 1px solid rgba(255,255,255,.25);
+}
+.game-paddle::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  box-shadow: 
+    0 16px 0 rgba(255,255,255,.12),
+    0 28px 0 rgba(255,255,255,.08);
+}
+.game-paddle-player { left: 9%; } 
+.game-paddle-opponent { 
+  right: 9%; 
+  background: 
+    linear-gradient(135deg, 
+      rgba(255,255,255,.3) 0%, 
+      transparent 40%),
+    linear-gradient(180deg, rgba(255,255,255,.95), rgba(240,240,240,.9));
+  box-shadow: 
+    0 6px 12px rgba(0,0,0,.35),
+    inset 1px 1px 3px rgba(255,255,255,.5),
+    inset -1px -1px 2px rgba(0,0,0,.15);
+}
+.game-hit { flex: 1; } 
+.game-reset { color: #fff; border-color: rgba(255,255,255,.65); }
+@keyframes pickleball-rally-3d { 
+  from { 
+    left: 18%; 
+    top: 65%; 
+    transform: translate(-50%, -50%) translateZ(25px) scale(1);
+  } 
+  50% {
+    transform: translate(-50%, -50%) translateZ(45px) scale(1.2);
+  }
+  to { 
+    left: 82%; 
+    top: 35%; 
+    transform: translate(-50%, -50%) translateZ(25px) scale(1);
+  } 
+}
+@media (prefers-reduced-motion: reduce) { .game-ball-moving { animation: none; left: 82%; } }
+.game-canvas {
+  display: block;
+  width: 100%;
+  height: clamp(190px, 42vw, 270px);
+  margin: .8rem 0 .55rem;
+  border: 2px solid rgba(255,255,255,.72);
+  border-radius: 16px;
+  background: #0e7c7b;
+  box-shadow: inset 0 0 26px rgba(0,0,0,.25), 0 12px 24px -15px rgba(0,0,0,.65);
+  cursor: crosshair;
+  touch-action: none;
+}
+.game-canvas:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 3px; }
+.game-movement { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: .55rem; }
+.game-move { min-height: 44px; font-size: 1.1rem; font-weight: 800; }
+.game-hit { min-height: 44px; font-weight: 800; }
+.game-controls { justify-content: center; margin-top: .55rem; }
+.game-reset { min-height: 40px; }
+@media (max-width: 420px) {
+  .pickleball-game { padding: .75rem; }
+  .game-canvas { height: 205px; }
+}
+.pickleball-card > * {
+  position: relative;
+  z-index: 1;
+}
+.pickleball-card .portal-action-btn {
+  background-clip: padding-box;
+  -webkit-background-clip: padding-box;
+}
+
+/* Accent top edge */
+.pickleball-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--brand-gradient);
+  background-origin: border-box;
+}
+
+/* Soft corner halo inside the card */
+.pickleball-card::after {
+  content: "";
+  position: absolute;
+  top: -70px;
+  right: -70px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--brand-accent-rgb), 0.22) 0%, rgba(var(--brand-accent-rgb), 0) 66%);
+  pointer-events: none;
+}
+
+.pickleball-card.login-card {
+  max-width: 400px;
+}
+
+/* ---- Brand ---- */
+.pickleball-brand {
+  position: relative;
+  margin-bottom: 12px;
+}
+.pickleball-banner {
+  width: 100%;
+  margin: 24px 0 24px;
+  overflow: hidden;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px -16px rgba(3, 12, 14, 0.55);
+}
+.pickleball-banner img {
+  display: block;
+  width: 100%;
+  height: clamp(150px, 30vw, 190px);
+  object-fit: cover;
+}
+@media (max-width: 560px) {
+  .pickleball-banner img { height: 150px; }
+}
+.pickleball-banner-preview {
+  max-width: 620px;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--sp-soft-line);
+}
+.pickleball-banner-preview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3.333 / 1;
+  object-fit: cover;
+}
+.pickleball-brand-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: var(--brand-primary-soft);
+  box-shadow:
+    0 0 0 10px rgba(var(--brand-primary-rgb), 0.1),
+    0 16px 30px -12px rgba(var(--brand-primary-rgb), 0.5);
+}
+.pickleball-brand-badge::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 2px solid rgba(var(--brand-accent-rgb), 0.55);
+  pointer-events: none;
+}
+.pickleball-brand-logo {
+  max-height: 62px;
+  max-width: 72%;
+  object-fit: contain;
+}
+.pickleball-brand-name {
+  margin: 14px 0 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--sp-ink);
+}
+.pickleball-brand-tagline {
+  display: inline-block;
+  margin: 6px 0 0;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--brand-primary-dark);
+  background: rgba(var(--brand-primary-rgb), 0.1);
+}
+
+/* ---- Status pill ---- */
+.status-bar-slot {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 20px -10px rgba(3, 12, 14, 0.5);
+}
+.status-pill .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.status-connected .dot {
+  background: var(--brand-accent);
+  box-shadow: 0 0 0 4px rgba(var(--brand-accent-rgb), 0.25);
+}
+.status-disconnected .dot {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* ---- Device info ---- */
+.device-info {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 6px 0 12px;
+  font-size: 0.78rem;
+}
+.device-info span {
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--sp-ink-2);
+  background: rgba(var(--brand-primary-rgb), 0.08);
+}
+.device-info .info-sep {
+  display: none;
+}
+
+/* ---- Session summary ---- */
+.session-slot {
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+.session-summary {
+  position: relative;
+  overflow: hidden;
+  padding: 16px 14px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.24);
+  background:
+    linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.16) 0%, rgba(var(--brand-primary-rgb), 0.06) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+.session-summary.is-paused {
+  opacity: 0.6;
+  filter: grayscale(0.3);
+}
+.session-metrics {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: safe center;
+  gap: 4px;
+}
+.session-metric {
+  flex: 0 0 auto;
+  min-width: 0;
+  text-align: center;
+  padding: 3px 10px;
+}
+.session-metric:only-child {
+  flex: 1 1 0;
+}
+.session-metric + .session-metric {
+  border-top: 1px dashed var(--sp-soft-line);
+  border-left: none;
+}
+.session-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sp-ink-3);
+}
+.session-value {
+  display: inline-block;
+  min-width: 130px;
+  margin: 3px auto 0;
+  padding: 11px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.38);
+  background:
+    linear-gradient(180deg, rgba(var(--brand-primary-rgb), 0.08) 0%, rgba(var(--brand-primary-rgb), 0.14) 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.75),
+    inset 0 -3px 9px rgba(var(--brand-primary-rgb), 0.16),
+    0 4px 12px -4px rgba(var(--brand-primary-rgb), 0.4);
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--sp-ink);
+  font-variant-numeric: tabular-nums;
+  transform-origin: center;
+  transition: transform 0.15s ease;
+}
+.meter-unit {
+  font-size: 0.58em;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--brand-primary-dark);
+  opacity: 0.85;
+  margin-right: 0.12em;
+}
+.session-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--sp-soft-line);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--brand-primary-dark);
+}
+.session-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  display: inline-block;
+}
+.is-paused .session-dot {
+  background: #97a1a5;
+}
+
+/* ---- Action buttons ---- */
+.action-buttons {
+  gap: 0.75rem !important;
+  margin-top: 16px;
+}
+.action-buttons .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0;
+}
+.portal-action-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 14px;
+  padding: 0.9rem 1.25rem;
+  min-height: 52px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+.portal-action-btn:focus-visible,
+.voucher-apply:focus-visible,
+.voucher-input:focus-visible,
+.login-card .form-control:focus-visible {
+  outline: 3px solid rgba(var(--brand-accent-rgb), 0.65);
+  outline-offset: 3px;
+}
+.btn-primary.portal-action-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(110deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  pointer-events: none;
+}
+.portal-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px -14px rgba(var(--brand-primary-rgb), 0.55);
+}
+.btn-outline-primary.portal-action-btn:hover {
+  background-color: var(--brand-primary-soft);
+  background-image: none;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary-dark);
+}
+.portal-action-btn:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* ---- Voucher form ---- */
+.voucher-form {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--sp-soft-line);
+}
+.voucher-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 9px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--sp-ink-2);
+}
+.voucher-label::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background: var(--brand-primary-soft);
+  border-radius: 4px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%230e7c7b' d='M2.5 4A1.5 1.5 0 0 0 1 5.5v.5h14v-.5A1.5 1.5 0 0 0 13.5 4h-11zm12 7h-12v.5A1.5 1.5 0 0 0 4 13h8a1.5 1.5 0 0 0 1.5-1.5V11zM0 5.5A2.5 2.5 0 0 1 2.5 3h11A2.5 2.5 0 0 1 16 5.5v5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 10.5v-5zm9 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H8a.5.5 0 0 1-.5-.5V7a.5.5 0 0 1 .5-.5h1zm1.5 1.5a.5.5 0 0 0 .5-.5V7a.5.5 0 0 0-.5-.5H6A.5.5 0 0 0 5.5 7v1a.5.5 0 0 0 .5.5h5z'/%3E%3C/svg%3E");
+  background-size: 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.voucher-input-group {
+  display: flex;
+  gap: 10px;
+}
+.voucher-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  border-color: var(--sp-soft-line);
+  border-width: 2px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.voucher-input:focus,
+.login-card .form-control:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 0.25rem rgba(var(--brand-primary-rgb), 0.18);
+  transform: translateY(-1px);
+}
+.voucher-input::placeholder {
+  text-transform: none;
+  font-weight: 400;
+  letter-spacing: normal;
+  opacity: 0.6;
+}
+.voucher-apply {
+  flex: 0 0 auto;
+  min-width: 90px;
+  padding: 0.65rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* ---- Internet status ---- */
+.internet-status {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--sp-soft-line);
+}
+
+.court-rates-page {
+  text-align: center;
+}
+.venue-info-page {
+  max-width: 760px;
+}
+.venue-info-section {
+  padding: 24px 0;
+}
+.venue-info-section + .venue-info-section {
+  border-top: 1px dashed var(--sp-soft-line);
+}
+.pickleball-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  margin-top: 1rem;
+}
+.pickleball-guide-card {
+  padding: 1rem;
+  border: 1px solid var(--sp-soft-line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(var(--brand-primary-rgb), .07), rgba(255,255,255,.7));
+}
+.pickleball-guide-card h3 {
+  margin: .65rem 0 .35rem;
+  color: var(--sp-ink);
+  font-size: .95rem;
+}
+.pickleball-guide-card p {
+  margin: 0;
+  color: var(--sp-ink-2);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+.guide-icon {
+  display: inline-grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--brand-primary-dark);
+  background: var(--brand-primary-soft);
+  font-size: 1.1rem;
+}
+.beginner-tips {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-left: 4px solid var(--brand-accent);
+  border-radius: 0 14px 14px 0;
+  background: rgba(var(--brand-accent-rgb), .12);
+}
+.beginner-tips h3 { margin-bottom: .45rem; color: var(--sp-ink); }
+.beginner-tips ul { margin: 0; padding-left: 1.2rem; color: var(--sp-ink-2); font-size: .84rem; line-height: 1.6; }
+@media (max-width: 700px) {
+  .pickleball-guide-grid { grid-template-columns: 1fr; }
+}
+.venue-info-section h2 {
+  margin-bottom: 14px;
+  color: var(--sp-ink);
+}
+.venue-booking-section .portal-action-btn {
+  box-shadow: 0 8px 20px -10px rgba(var(--brand-primary-rgb), 0.4);
+}
+.venue-booking-section .portal-action-btn:hover {
+  box-shadow: 0 12px 26px -12px rgba(var(--brand-primary-rgb), 0.55);
+}
+/* The generic card-child stagger is designed for the compact portal home.
+   On this longer page it can animate section backgrounds through one another,
+   so use a single stable card entrance and animate the final action directly. */
+.venue-info-page > * {
+  animation: none !important;
+}
+.venue-info-page .venue-back-btn {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease, background-color 0.18s ease;
+}
+.venue-info-page .venue-back-btn:hover,
+.venue-info-page .venue-back-btn:focus-visible {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 14px 26px -14px rgba(var(--brand-primary-rgb), 0.7);
+  filter: brightness(1.04);
+}
+.venue-info-page .venue-back-btn:active {
+  transform: translateY(0) scale(0.985) !important;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .venue-info-page .venue-back-btn {
+    animation: pickleball-rise 0.5s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  }
+}
+.court-rates-modal .modal-content {
+  overflow: hidden;
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.18);
+  border-radius: 22px;
+  box-shadow: 0 24px 48px -20px rgba(3, 12, 14, 0.55);
+}
+.court-rates-modal .modal-header {
+  border-top: 4px solid var(--brand-accent);
+}
+.court-rates-modal .modal-title {
+  color: var(--sp-ink);
+  font-weight: 800;
+}
+.court-rates-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  text-align: left;
+}
+.court-rate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--sp-soft-line);
+  border-radius: 14px;
+  background: var(--brand-primary-soft);
+  color: var(--sp-ink);
+}
+.court-rate-row div {
+  display: grid;
+  gap: 0.15rem;
+}
+.court-rate-row small {
+  color: var(--sp-ink-2);
+}
+.tutorial-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--sp-soft-line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+}
+.tutorial-card h3 {
+  color: var(--sp-ink);
+}
+.affiliate-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.affiliate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--sp-soft-line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+}
+.affiliate-card img {
+  width: 100%;
+  height: 140px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+@media (max-width: 560px) {
+  .affiliate-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.affiliate-card h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  color: var(--sp-ink);
+}
+.affiliate-category {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  background: var(--brand-primary-soft);
+  border-radius: 6px;
+  color: var(--brand-primary-dark);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.affiliate-link-btn {
+  width: 100%;
+  margin-top: auto;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  min-height: auto;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* Keep venue identity and guest entry-point settings together at the top of
+   the admin form; operational content is managed in the sections below. */
+.pickleball-settings form {
+  display: flex;
+  flex-direction: column;
+}
+.pickleball-settings .venue-settings-card,
+.pickleball-settings .logo-settings-card,
+.pickleball-settings .banner-settings-card,
+.pickleball-settings .booking-settings-card {
+  order: 1;
+}
+.pickleball-settings .save-settings-btn {
+  order: 2;
+  align-self: flex-start;
+  margin-bottom: 1rem;
+}
+.pickleball-settings .rates-settings-card {
+  order: 3;
+}
+.pickleball-settings .tutorials-settings-card {
+  order: 4;
+}
+.pickleball-settings .affiliates-settings-card {
+  order: 5;
+}
+.internet-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 999px;
+  transition: all 0.3s ease;
+}
+.internet-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  transition: box-shadow 0.3s ease;
+}
+.internet-up {
+  color: #1f7a4c;
+  background: rgba(31, 122, 76, 0.08);
+  border: 1px solid rgba(31, 122, 76, 0.2);
+}
+.internet-up .internet-dot {
+  background: #1f7a4c;
+  box-shadow: 0 0 0 3px rgba(31, 122, 76, 0.2);
+}
+.internet-down {
+  color: #b1401f;
+  background: rgba(177, 64, 31, 0.08);
+  border: 1px solid rgba(177, 64, 31, 0.2);
+}
+.internet-down .internet-dot {
+  background: #b1401f;
+  box-shadow: 0 0 0 3px rgba(177, 64, 31, 0.15);
+}
+
+/* ---- Login card ---- */
+.login-card .pickleball-brand {
+  margin-bottom: 8px;
+}
+.login-card .pickleball-brand-logo {
+  max-height: 76px;
+  filter: drop-shadow(0 10px 16px rgba(var(--brand-primary-rgb), 0.35));
+}
+.login-title {
+  position: relative;
+  margin: 0 0 18px;
+  font-weight: 800;
+  color: var(--sp-ink);
+}
+.login-title::after {
+  content: "";
+  display: block;
+  width: 46px;
+  height: 3px;
+  margin: 10px auto 0;
+  border-radius: 2px;
+  background: var(--brand-gradient);
+}
+.login-card .form-label {
+  text-align: left;
+}
+.login-card form > div {
+  text-align: left;
+}
+.login-card .form-control {
+  border-radius: 12px;
+  border-color: var(--sp-soft-line);
+}
+.forgot-password {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  color: var(--brand-primary);
+  font-size: 0.85rem;
+}
+
+/* ---- Footer ---- */
+.pickleball-footer {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  padding: 13px 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+}
+.pickleball-footer a {
+  color: #fff;
+}
+
+/* Loading skeleton for HTMX content swaps */
+.htmx-swapping {
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.htmx-settling {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Smooth content replacement */
+.session-slot > *,
+.internet-status > *,
+.status-bar-slot > * {
+  animation: pickleball-fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes pickleball-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================================
+ * Animations
+ * ==========================================================================*/
+
+/* Staggered card & section entrances — children animate in one after another
+   so the card "assembles" instead of popping. SSE swaps only replace the
+   session-slot / internet-status / status-bar-slot inner HTML, so the
+   entrance for those re-runs when state changes (reads as an intentional
+   "session started" beat) while the brand/buttons/voucher stay put. */
+.pickleball-card {
+  animation: pickleball-card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pickleball-card > *:nth-child(1) { animation: pickleball-rise 0.5s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pickleball-card > *:nth-child(2) { animation: pickleball-rise 0.5s 0.16s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pickleball-card > *:nth-child(3) { animation: pickleball-rise 0.5s 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pickleball-card > *:nth-child(4) { animation: pickleball-rise 0.5s 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pickleball-card > *:nth-child(5) { animation: pickleball-rise 0.5s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pickleball-card > *:nth-child(6) { animation: pickleball-rise 0.5s 0.48s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+.status-pill {
+  animation: pickleball-drop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pickleball-footer {
+  animation: pickleball-rise 0.5s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Pulsing accent ring behind the brand logo */
+  .pickleball-brand-badge::before {
+    animation: pickleball-ping 2.8s ease-out infinite;
+  }
+
+  /* Live sheen sweeping the session panel while running */
+  .session-summary:not(.is-paused)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 25%, rgba(255, 255, 255, 0.5) 48%, transparent 70%);
+    transform: translateX(-110%);
+    pointer-events: none;
+    animation: pickleball-sheen 4.5s 1s ease-in-out infinite;
+  }
+
+  /* Running/paused pulse on the state dot */
+  .session-summary:not(.is-paused) .session-dot {
+    animation: pickleball-dot-pulse 1.9s ease-out infinite;
+  }
+
+  /* Sheen sweep across the insert-coin call-to-action */
+  .btn-primary.portal-action-btn::after {
+    animation: pickleball-sheen-btn 4.2s 1.2s ease-in-out infinite;
+  }
+
+  /* Pulsing status dot when connected */
+  .internet-up .internet-dot {
+    animation: pickleball-dot-pulse 2.2s ease-out infinite;
+  }
+}
+
+/* One-beat pulse applied by theme.js each time the metre re-renders */
+.session-value.pickleball-tick {
+  animation: pickleball-tick 0.22s ease;
+}
+
+/* ---- Keyframes ---- */
+@keyframes pickleball-card-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pickleball-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pickleball-drop {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pickleball-ping {
+  0%   { transform: scale(0.86); opacity: 0.85; }
+  70%  { transform: scale(1.28); opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes pickleball-sheen {
+  0%   { transform: translateX(-110%); }
+  45%, 100% { transform: translateX(110%); }
+}
+@keyframes pickleball-sheen-btn {
+  0%   { left: -60%; }
+  40%, 100% { left: 120%; }
+}
+@keyframes pickleball-dot-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(var(--brand-accent-rgb), 0.55); }
+  70%  { box-shadow: 0 0 0 10px rgba(var(--brand-accent-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--brand-accent-rgb), 0); }
+}
+@keyframes pickleball-tick {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes pickleball-blob {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-60px, 46px, 0) scale(1.18); }
+}
+@keyframes pickleball-dots {
+  from { background-position: 0 0; }
+  to   { background-position: 60px 30px; }
+}
+@keyframes pickleball-ball-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(-18px, 22px, 0) rotate(18deg); }
+}
+@keyframes pickleball-ball-shadow {
+  0%, 100% { transform: scale(1); opacity: 0.22; }
+  50% { transform: translateX(18px) scale(0.72); opacity: 0.1; }
+}
+
+/* Honorable reduced-motion: collapse everything to a single quick fade so the
+   page still reads as intentional without any continuous movement. */
+@media (prefers-reduced-motion: reduce) {
+  body.pickleball-portal::before,
+  body.pickleball-portal::after {
+    display: none;
+  }
+  .pickleball-bg-scene {
+    display: none;
+  }
+  .pickleball-card,
+  .pickleball-card > *,
+  .status-pill,
+  .pickleball-footer {
+    animation-duration: 0.15s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+  .pickleball-brand-badge::before,
+  .theme-pickleball .pickleball-bg-scene::before,
+  .theme-pickleball .pickleball-bg-scene::after,
+  .session-summary:not(.is-paused)::after,
+  .btn-primary.portal-action-btn::after,
+  .session-summary:not(.is-paused) .session-dot,
+  .internet-up .internet-dot,
+  .session-value.pickleball-tick {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .pickleball-card {
+    border-radius: 20px;
+    padding: 22px 16px 24px;
+  }
+  .session-metrics {
+    gap: 6px;
+  }
+  .session-metric {
+    padding: 4px 8px;
+  }
+  .session-value {
+    font-size: 1.65rem;
+    min-width: 115px;
+    padding: 9px 14px;
+  }
+  .portal-action-btn {
+    min-height: 50px;
+    font-size: 0.92rem;
+    padding: 0.85rem 1.1rem;
+  }
+  .voucher-label {
+    font-size: 0.82rem;
+  }
+  .voucher-input,
+  .voucher-apply {
+    font-size: 0.88rem;
+  }
+}
+
+/* On tablets and wider phones, two live session metrics read faster side by
+   side. Keep the stacked layout below this breakpoint so long translated
+   labels never squeeze the captive portal on small screens. */
+@media (min-width: 520px) {
+  .pickleball-card { max-width: 480px; }
+  .session-metrics { flex-direction: row; gap: 0; }
+  .session-metric { flex: 1 1 0; }
+  .session-metric + .session-metric { border-top: 0; border-left: 1px dashed var(--sp-soft-line); }
+  .session-value { min-width: 0; width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .pickleball-card { 
+    padding: 20px 14px 22px;
+    border-radius: 18px;
+  }
+  .voucher-input-group { 
+    flex-direction: column;
+    gap: 8px;
+  }
+  .voucher-apply { 
+    width: 100%;
+    padding: 0.7rem 1rem;
+  }
+  .portal-action-btn {
+    padding: 0.8rem 1rem;
+    min-height: 48px;
+    font-size: 0.9rem;
+  }
+  .session-value {
+    font-size: 1.5rem;
+    min-width: 100px;
+  }
+}
+
+/* ============================================================================
+ * Global portal shell — plain Bootstrap classes used by core and other
+ * plugins (payment options, insert-coin, voucher pages, etc.), not just this
+ * theme's own markup. Retinting these body-level tokens (the same mechanism
+ * Bootstrap's own [data-bs-theme=dark] uses) means a plugin page written in
+ * ordinary Bootstrap markup picks up the active theme's palette automatically
+ * -- see .claude/rules/theme-vs-content-styling.md Rule 1. Scoped under
+ * body.pickleball-portal, present on every page this theme renders. */
+body.pickleball-portal {
+  --bs-body-bg: #fff;
+  --bs-body-color: #1c2b2b;
+  --bs-emphasis-color: #103c3c;
+  --bs-secondary-color: rgba(53, 80, 79, 0.85);
+  --bs-secondary-bg: var(--brand-primary-soft);
+  --bs-tertiary-bg: var(--brand-primary-soft);
+  --bs-border-color: rgba(14, 124, 123, 0.18);
+  --bs-border-color-translucent: rgba(14, 124, 123, 0.18);
+  --bs-heading-color: #103c3c;
+  --bs-link-color: var(--brand-primary);
+  --bs-link-hover-color: var(--brand-primary-dark);
+  --bs-link-color-rgb: var(--brand-primary-rgb);
+  --bs-link-hover-color-rgb: var(--brand-primary-rgb);
+  --bs-focus-ring-color: rgba(var(--brand-primary-rgb), 0.25);
+}
+
+/* ============================================================================
+ * Payment journeys
+ *
+ * Payment options and the three insert-coin providers are core/plugin views,
+ * so their source stays untouched. These stable portal IDs are the shared
+ * contract that lets the active pickleball theme give every payment step the same
+ * pickleball surface: soft white cards, yellow paddle-ball accents, and one
+ * consistent primary action. */
+.theme-pickleball #payment-options-page,
+.theme-pickleball #insert-coin-page {
+  width: min(100%, 480px) !important;
+  margin-inline: auto;
+  padding: 0 12px;
+}
+
+.theme-pickleball #payment-options-page .card,
+.theme-pickleball #insert-coin-page {
+  position: relative;
+  overflow: hidden;
+  color: var(--sp-ink);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  border-radius: 26px;
+  box-shadow:
+    0 30px 60px -18px rgba(3, 12, 14, 0.55),
+    0 8px 24px -12px rgba(3, 12, 14, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.theme-pickleball #payment-options-page .card::before,
+.theme-pickleball #insert-coin-page::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--brand-gradient);
+}
+
+.theme-pickleball #payment-options-page .card-body,
+.theme-pickleball #insert-coin-page {
+  padding: 1.35rem;
+}
+
+.theme-pickleball #payment-options-page .card + .card {
+  margin-top: 14px;
+}
+
+.theme-pickleball #payment-options-page .payment-option-card,
+.theme-pickleball #insert-coin-page #done-btn,
+.theme-pickleball #insert-coin-page #cancel-inline-btn,
+.theme-pickleball #insert-coin-page a#cancel-btn,
+.theme-pickleball #insert-coin-page #mock-coin-btn {
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  min-height: 52px;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.5rem;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.theme-pickleball #payment-options-page .payment-option-card,
+.theme-pickleball #insert-coin-page #done-btn {
+  border: 2px solid var(--brand-accent);
+  box-shadow:
+    0 12px 26px -14px rgba(var(--brand-primary-rgb), 0.75),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+.theme-pickleball #payment-options-page .payment-option-card:hover,
+.theme-pickleball #insert-coin-page #done-btn:hover:not(:disabled),
+.theme-pickleball #insert-coin-page #mock-coin-btn:hover {
+  transform: translateY(-2px);
+  filter: saturate(1.08);
+  box-shadow:
+    0 16px 28px -14px rgba(var(--brand-primary-rgb), 0.7),
+    0 0 0 4px rgba(var(--brand-accent-rgb), 0.14),
+    inset 0 2px 3px rgba(255, 255, 255, 0.28);
+}
+
+.theme-pickleball #payment-options-page .payment-option-card:active,
+.theme-pickleball #insert-coin-page #done-btn:active,
+.theme-pickleball #insert-coin-page #mock-coin-btn:active {
+  transform: scale(0.98);
+}
+
+.theme-pickleball #payment-options-page .payment-option-card .payment-loading-spinner {
+  color: var(--brand-accent);
+}
+
+.theme-pickleball #payment-options-page .border-primary {
+  border-color: rgba(var(--brand-primary-rgb), 0.24) !important;
+}
+
+.theme-pickleball #payment-options-page .card-title,
+.theme-pickleball #insert-coin-page h1,
+.theme-pickleball #insert-coin-page h6 {
+  color: var(--sp-ink);
+  font-weight: 800;
+}
+
+.theme-pickleball #payment-options-page .text-body-secondary,
+.theme-pickleball #insert-coin-page .small {
+  color: var(--sp-ink-2) !important;
+}
+
+.theme-pickleball #insert-coin-page .progress,
+.theme-pickleball #payment-options-page .progress {
+  height: 0.55rem;
+  overflow: hidden;
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.14);
+  border-radius: 999px;
+  background: var(--brand-primary-soft);
+}
+
+.theme-pickleball #insert-coin-page .progress-bar,
+.theme-pickleball #payment-options-page .progress-bar {
+  border-radius: inherit;
+  background: var(--brand-gradient);
+}
+
+.theme-pickleball #insert-coin-page img {
+  filter: drop-shadow(0 12px 14px rgba(var(--brand-primary-rgb), 0.18));
+}
+
+.theme-pickleball #insert-coin-page .alert {
+  border: 0;
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-pickleball #payment-options-page .payment-option-card,
+  .theme-pickleball #insert-coin-page #done-btn,
+  .theme-pickleball #insert-coin-page #cancel-inline-btn,
+  .theme-pickleball #insert-coin-page a#cancel-btn,
+  .theme-pickleball #insert-coin-page #mock-coin-btn {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+ * Shared primary actions
+ *
+ * These pages are rendered by core and payment plugins, so their templates
+ * cannot carry pickleball-theme-specific classes. Keep their primary actions on
+ * the same paddle-shaped contract as the portal CTA and login button. The
+ * insert-coin cancel actions are included as peer actions so every control on
+ * that flow has the same visual language; mock-insert remains secondary. */
+.theme-pickleball .portal-action-btn,
+.theme-pickleball .voucher-apply,
+.theme-pickleball .login-card button[type="submit"],
+.theme-pickleball #wifi-purchase-success-page #ps-continue-btn,
+.theme-pickleball #payment-options-page .payment-option-card,
+.theme-pickleball #insert-coin-page #done-btn,
+.theme-pickleball #insert-coin-page #cancel-btn.btn,
+.theme-pickleball #insert-coin-page #cancel-inline-btn {
+  min-height: 48px;
+  border-radius: 30px 30px 15px 15px;
+  border-width: 2px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+/* The portal's secondary navigation action (for example Pause) is emitted as
+ * an outline Bootstrap button. In this theme it shares the same visual role
+ * and footprint as Insert Coin, so normalize the variant to the same filled
+ * pickleball button instead of leaving two competing button treatments. */
+.theme-pickleball .btn-outline-primary.portal-action-btn {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--brand-primary);
+  --bs-btn-border-color: var(--brand-accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--brand-primary);
+  --bs-btn-hover-border-color: var(--brand-accent);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--brand-primary-dark);
+  --bs-btn-active-border-color: var(--brand-accent);
+  background-color: var(--brand-primary);
+  background-image: var(--brand-gradient);
+  background-origin: border-box;
+  background-repeat: no-repeat;
+  color: #fff;
+}
+
+.theme-pickleball .login-card button[type="submit"],
+.theme-pickleball #wifi-purchase-success-page #ps-continue-btn,
+.theme-pickleball #payment-options-page .payment-option-card,
+.theme-pickleball #insert-coin-page #done-btn,
+.theme-pickleball .btn-outline-primary.portal-action-btn,
+.theme-pickleball #insert-coin-page #cancel-btn.btn,
+.theme-pickleball #insert-coin-page #cancel-inline-btn {
+  border-color: var(--brand-accent);
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.28);
+}
+
+.theme-pickleball #insert-coin-page #cancel-btn.btn,
+.theme-pickleball #insert-coin-page #cancel-inline-btn {
+  display: inline-block;
+  width: auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.875rem;
+  text-align: center;
+  color: #fff !important;
+  background-color: var(--brand-primary);
+  background-image: var(--brand-gradient);
+  background-origin: border-box;
+  background-repeat: no-repeat;
+  text-decoration: none;
+}
+
+.theme-pickleball #insert-coin-page #cancel-btn.btn span,
+.theme-pickleball #insert-coin-page #cancel-inline-btn span {
+  opacity: 1 !important;
+}
+
+/* Payment success content sits directly on the court background. Bootstrap's
+ * default success green is too low-contrast there, especially for the page
+ * heading and the Session Summary card header. */
+.theme-pickleball #wifi-purchase-success-page h2.text-success {
+  color: #fff !important;
+  text-shadow: 0 2px 8px rgba(3, 12, 14, 0.45);
+}
+
+.theme-pickleball #wifi-purchase-success-page > .ps-content > p {
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 5px rgba(3, 12, 14, 0.4);
+}
+
+.theme-pickleball #wifi-purchase-success-page > .ps-content > p span {
+  color: inherit !important;
+}
+
+.theme-pickleball #wifi-purchase-success-page > .ps-content > svg circle,
+.theme-pickleball #wifi-purchase-success-page > .ps-content > svg polyline {
+  stroke: var(--brand-accent) !important;
+}
+
+.theme-pickleball #wifi-purchase-success-page .card-header {
+  color: #fff;
+  background: var(--brand-primary);
+  border-bottom-color: rgba(var(--brand-accent-rgb), 0.55);
+}
+
+.theme-pickleball .login-card button[type="submit"]:hover,
+.theme-pickleball .login-card button[type="submit"]:focus-visible,
+.theme-pickleball #wifi-purchase-success-page #ps-continue-btn:hover,
+.theme-pickleball #wifi-purchase-success-page #ps-continue-btn:focus-visible,
+.theme-pickleball #payment-options-page .payment-option-card:hover,
+.theme-pickleball #payment-options-page .payment-option-card:focus-visible,
+.theme-pickleball #insert-coin-page #done-btn:hover:not(:disabled),
+.theme-pickleball #insert-coin-page #done-btn:focus-visible,
+.theme-pickleball #insert-coin-page #cancel-btn.btn:hover,
+.theme-pickleball #insert-coin-page #cancel-btn.btn:focus-visible,
+.theme-pickleball #insert-coin-page #cancel-inline-btn:hover,
+.theme-pickleball #insert-coin-page #cancel-inline-btn:focus-visible {
+  transform: translateY(-2px);
+  filter: saturate(1.08);
+  border-color: var(--brand-accent);
+  box-shadow:
+    0 16px 28px -14px rgba(var(--brand-primary-rgb), 0.7),
+    0 0 0 4px rgba(var(--brand-accent-rgb), 0.14),
+    inset 0 2px 3px rgba(255, 255, 255, 0.28);
+}
+
+.theme-pickleball .login-card button[type="submit"]:active,
+.theme-pickleball #wifi-purchase-success-page #ps-continue-btn:active,
+.theme-pickleball #payment-options-page .payment-option-card:active,
+.theme-pickleball #insert-coin-page #done-btn:active,
+.theme-pickleball #insert-coin-page #cancel-btn.btn:active,
+.theme-pickleball #insert-coin-page #cancel-inline-btn:active {
+  transform: translateY(0) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-pickleball .portal-action-btn,
+  .theme-pickleball .voucher-apply,
+  .theme-pickleball .login-card button[type="submit"],
+  .theme-pickleball #wifi-purchase-success-page #ps-continue-btn,
+  .theme-pickleball #payment-options-page .payment-option-card,
+  .theme-pickleball #insert-coin-page #done-btn,
+  .theme-pickleball #insert-coin-page #cancel-btn.btn,
+  .theme-pickleball #insert-coin-page #cancel-inline-btn {
+    transition: none;
+  }
+}
