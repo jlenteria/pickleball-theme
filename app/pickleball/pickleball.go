@@ -53,15 +53,19 @@ var registry = []Theme{
 		Icon:        "bi-circle-fill",
 		DefaultLogo: "images/pickleball-logo.svg",
 
-		// A teal court/paddle primary with a pickleball-yellow accent --
-		// sampled to sit well on both a white admin dashboard and a dark
-		// portal backdrop.
-		Primary:     "#0E7C7B",
-		PrimaryRGB:  "14, 124, 123",
-		PrimaryDark: "#0A5958",
-		PrimarySoft: "#E3F5F4",
-		Accent:      "#C6E92B",
-		AccentRGB:   "198, 233, 43",
+		// A deep court-emerald primary with a high-voltage "optic lime"
+		// accent -- the nocturnal, floodlit-court palette. Primary stays a
+		// usable mid-dark green so it still reads fine as admin text/buttons
+		// on a white dashboard; the portal's own CSS (theme.css) additionally
+		// recolors the captive-portal card itself to dark glass so the two
+		// deep-green tones (Primary/PrimaryDark) read as a true night court
+		// there instead of merely a dark button color.
+		Primary:     "#134E43",
+		PrimaryRGB:  "19, 78, 67",
+		PrimaryDark: "#072E27",
+		PrimarySoft: "#E9F4F1",
+		Accent:      "#CCFF00",
+		AccentRGB:   "204, 255, 0",
 	},
 }
 

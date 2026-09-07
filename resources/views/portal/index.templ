@@ -105,7 +105,7 @@ templ PortalIndexPage(api sdkapi.IPluginApi, data PortalIndexData) {
 				href={ templ.SafeURL(api.Http().Helpers().UrlForRoute("portal-theme:pickleball-theme:court-rates")) }
 				class="btn btn-outline-primary portal-action-btn"
 			>
-				<span class="btn-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></span>
+				<span class="btn-icon">@templ.Raw(api.UI().IconAttrs("info-circle", "", "", `aria-hidden="true"`))</span>
 				{ api.Translate("label", "Court Info & Booking") }
 			</a>
 		</div>
@@ -162,7 +162,7 @@ templ TutorialsModal(api sdkapi.IPluginApi, tutorials []settings.Tutorial) {
 					<div class="court-rates-list">
 						for i, tutorial := range tutorials {
 							<button type="button" class="court-rate-row text-start w-100" data-bs-toggle="modal" data-bs-target={ "#tutorial-player-" + strconv.Itoa(i) }>
-								<strong>{ tutorial.Title }</strong><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+								<strong>{ tutorial.Title }</strong>@templ.Raw(api.UI().IconAttrs("box-arrow-up-right", "", "", `aria-hidden="true"`))
 							</button>
 						}
 					</div>
@@ -235,7 +235,7 @@ templ VenueInfoPage(api sdkapi.IPluginApi, rates []settings.CourtRate, bookingUR
 		if bookingURL != "" {
 			<section class="venue-info-section venue-booking-section">
 				<a href={ templ.SafeURL(bookingURL) } target="_blank" rel="noopener noreferrer" class="btn btn-primary portal-action-btn">
-					<span class="btn-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
+					<span class="btn-icon">@templ.Raw(api.UI().IconAttrs("calendar2-check", "", "", `aria-hidden="true"`))</span>
 					{ api.Translate("label", "Book a Court") }
 				</a>
 			</section>
@@ -245,17 +245,17 @@ templ VenueInfoPage(api sdkapi.IPluginApi, rates []settings.CourtRate, bookingUR
 			<p class="text-start text-body-secondary small">{ api.Translate("label", "New to pickleball? Here are the essentials before you step on court.") }</p>
 			<div class="pickleball-guide-grid text-start">
 				<article class="pickleball-guide-card">
-					<span class="guide-icon" aria-hidden="true"><i class="bi bi-123"></i></span>
+					<span class="guide-icon" aria-hidden="true">@templ.Raw(api.UI().IconAttrs("123", "", "", ""))</span>
 					<h3>{ api.Translate("label", "Scoring") }</h3>
 					<p>{ api.Translate("label", "Games are usually played to 11 points and you must win by 2. In traditional scoring, only the serving side scores.") }</p>
 				</article>
 				<article class="pickleball-guide-card">
-					<span class="guide-icon" aria-hidden="true"><i class="bi bi-arrow-repeat"></i></span>
+					<span class="guide-icon" aria-hidden="true">@templ.Raw(api.UI().IconAttrs("arrow-repeat", "", "", ""))</span>
 					<h3>{ api.Translate("label", "Serve & two-bounce rule") }</h3>
 					<p>{ api.Translate("label", "Serve diagonally underhand, then let the serve and return bounce once before volleying.") }</p>
 				</article>
 				<article class="pickleball-guide-card">
-					<span class="guide-icon" aria-hidden="true"><i class="bi bi-bounding-box"></i></span>
+					<span class="guide-icon" aria-hidden="true">@templ.Raw(api.UI().IconAttrs("bounding-box", "", "", ""))</span>
 					<h3>{ api.Translate("label", "The Kitchen") }</h3>
 					<p>{ api.Translate("label", "You may stand in the non-volley zone, but you cannot volley while standing there or while momentum carries you into it.") }</p>
 				</article>

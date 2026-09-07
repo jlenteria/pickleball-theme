@@ -1,12 +1,12 @@
 # Pickleball Theme
 
-Transform your WiFi portal into a welcoming pickleball club experience. The Pickleball Theme brings the energy and style of the world's fastest-growing sport to your Flarewifi captive portal and venue management interface with court-inspired design, paddle-shaped buttons, and vibrant pickleball-yellow accents.
+Transform your WiFi portal into a nocturnal, floodlit pickleball club experience. The Pickleball Theme brings the energy of the world's fastest-growing sport to your Flarewifi captive portal with a moonlit court backdrop, frosted glass cards, paddle-shaped buttons, and a high-voltage optic-lime accent.
 
 ## Features
 
 - **Unified Branding Across All Touchpoints** — Your venue name, logo, and banner stay perfectly aligned across the admin dashboard, guest WiFi portal, and login screens for a consistent brand experience.
 
-- **Court-Inspired Visual Design** — Features teal court surfaces, clean white court lines, kitchen-zone panels, paddle-shaped action buttons, and signature pickleball-yellow accents that make the sport instantly recognizable while maintaining excellent readability.
+- **Night Court Visual Design** — A deep midnight-pine court backdrop with a perspective floor and net, a frosted dark-glass portal card, kitchen-zone panels, paddle-shaped action buttons, and a signature optic-lime accent reserved for the one action that matters on each screen.
 
 - **Complete Venue Identity Control** — Upload your custom club or venue logo, set your brand name, add a welcoming banner image, and configure your court booking URL—all from one centralized settings page.
 
@@ -31,6 +31,13 @@ Transform your WiFi portal into a welcoming pickleball club experience. The Pick
 - **Hotels & Resorts** — Enhance your pickleball court amenities with branded WiFi that reflects the sport
 - **Recreation Centers** — Provide a modern, sport-specific portal for your pickleball programs and open play sessions
 - **Multi-Sport Facilities** — Showcase your pickleball offerings with a dedicated, professional WiFi theme
+
+## What's New in v0.2.1
+
+- All-new "Night Court" portal look: a dark, floodlit court backdrop with a frosted glass card, replacing the previous light card design
+- One optic-lime accent reserved for the primary action on each screen (Insert Coin, Apply, Sign In, Done Paying) — every other action reads as a deep court-emerald pill with a lime rim
+- The payment provider list, purchase summary, and coin/cash payment screens now share the same dark glass treatment as the rest of the portal
+- Redesigned MAC/IP device-info readout as a single monospace telemetry pill
 
 ## What's New in v0.2.0
 

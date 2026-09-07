@@ -24,12 +24,12 @@
    are deliberately left alone — those encode meaning, not brand. */
 
 :root {
-  --brand-primary: #0e7c7b;
-  --brand-primary-dark: #0a5958;
-  --brand-primary-rgb: 14, 124, 123;
-  --brand-primary-soft: #e3f5f4;
-  --brand-accent: #c6e92b;
-  --brand-accent-rgb: 198, 233, 43;
+  --brand-primary: #134e43;
+  --brand-primary-dark: #072e27;
+  --brand-primary-rgb: 19, 78, 67;
+  --brand-primary-soft: #e9f4f1;
+  --brand-accent: #ccff00;
+  --brand-accent-rgb: 204, 255, 0;
 
   --brand-gradient: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
 
