@@ -1796,13 +1796,32 @@ body.pickleball-portal .alert-danger {
   background-image: none;
 }
 
+/* One Cancel box for the whole payment flow, whatever plugin renders it.
+ *
+ * Two hooks, because the plugins are not uniform:
+ *   - #cancel-inline-btn / #cancel-btn are the ids every insert-coin page
+ *     gives its Cancel (wired, wireless and LAN subvendo all reuse them, so a
+ *     provider that copies another provider's template inherits the box).
+ *   - .btn-link.btn-sm.text-reset is the codebase's marker for this escape
+ *     hatch -- the payment picker's "Cancel Purchase", ecash's "Use another
+ *     payment method" and "Back to the portal" all carry exactly that trio.
+ *     That reaches the picker and ecash without an id to hook.
+ *
+ * ⚠️ padding MUST be !important. Bootstrap's spacing utilities are !important
+ * as well, and a provider is free to pad its Cancel for a bigger tap target --
+ * LAN subvendo ships px-5 py-3 for exactly that. Importance outranks
+ * specificity, so without this the utility wins and that Cancel renders 3rem
+ * wide on each side and visibly taller than the one on the next provider's
+ * page. With !important on both sides the id/class specificity here (two ids)
+ * wins and the utility is dropped. */
 .theme-pickleball #insert-coin-page #cancel-btn.btn,
-.theme-pickleball #insert-coin-page #cancel-inline-btn {
+.theme-pickleball #insert-coin-page #cancel-inline-btn,
+.theme-pickleball .btn-link.btn-sm.text-reset {
   display: inline-block;
   width: auto;
   min-width: 0;
   min-height: 40px;
-  padding: 0.375rem 0.875rem;
+  padding: 0.375rem 0.875rem !important;
   font-size: 0.875rem;
   text-align: center;
   background-origin: border-box;
